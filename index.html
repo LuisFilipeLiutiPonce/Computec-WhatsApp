@@ -560,12 +560,12 @@ function makeCard(it) {
 
   let actions = it.status==="aguardando_resposta" ? `
     <div class="flex flex-wrap gap-2 mt-2">
-      <button onclick="removeItem(${it.id})"
+      <button onclick="removeItem('${it.id}')"
               class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
                      text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
         <i data-lucide="check" class="w-3 h-3"></i> Respondeu
       </button>
-      <button onclick="moverEstoque(${it.id})"
+      <button onclick="moverEstoque('${it.id}')"
               class="flex items-center gap-1 border text-blue-600 hover:bg-blue-50
                      text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
               style="border-color:#3b82f6;">
@@ -573,7 +573,7 @@ function makeCard(it) {
       </button>
     </div>` : `
     <div class="mt-2">
-      <button onclick="removeItem(${it.id})"
+      <button onclick="removeItem('${it.id}')"
               class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
                      text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
         <i data-lucide="check" class="w-3 h-3"></i> Produto chegou
@@ -597,10 +597,10 @@ function makeCard(it) {
         ${actions}
       </div>
       <div class="flex flex-col gap-2 shrink-0">
-        <button onclick="openEditModal(${it.id})" class="text-gray-300 hover:text-blue-600 transition-colors" title="Editar">
+        <button onclick="openEditModal('${it.id}')" class="text-gray-300 hover:text-blue-600 transition-colors" title="Editar">
           <i data-lucide="pencil" class="w-4 h-4"></i>
         </button>
-        <button onclick="deleteItem(${it.id})" class="text-gray-300 hover:text-red-500 transition-colors" title="Excluir">
+        <button onclick="deleteItem('${it.id}')" class="text-gray-300 hover:text-red-500 transition-colors" title="Excluir">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
       </div>
@@ -631,24 +631,24 @@ function renderLista(tab) {
 
 /* ── ITEM ACTIONS ── */
 function removeItem(id) {
-  const it=itens.find(x=>x.id===id); if (!it) return;
+  const sid=String(id); const it=itens.find(x=>String(x.id)===sid); if (!it) return;
   const label=it.status==="aguardando_resposta"?"✓ Respondeu":"✓ Produto chegou";
   if (!confirm(`"${label}" para ${it.cliente}?\nO registro será removido.`)) return;
-  itens=itens.filter(x=>x.id!==id); renderAll(); refreshDrill();
-  apiWrite("delete", {id});
+  itens=itens.filter(x=>String(x.id)!==sid); renderAll(); refreshDrill();
+  apiWrite("delete", {id:sid});
 }
 function moverEstoque(id) {
-  const it=itens.find(x=>x.id===id); if (!it) return;
+  const sid=String(id); const it=itens.find(x=>String(x.id)===sid); if (!it) return;
   if (!confirm(`Mover "${it.cliente}" para Aguardando Estoque?`)) return;
   it.status="aguardando_estoque"; it.atualizadoEm=new Date().toISOString();
   renderAll(); refreshDrill();
   apiWrite("update", {item:it});
 }
 function deleteItem(id) {
-  const it=itens.find(x=>x.id===id); if (!it) return;
+  const sid=String(id); const it=itens.find(x=>String(x.id)===sid); if (!it) return;
   if (!confirm(`Excluir o registro de "${it.cliente}"?`)) return;
-  itens=itens.filter(x=>x.id!==id); renderAll(); refreshDrill();
-  apiWrite("delete", {id});
+  itens=itens.filter(x=>String(x.id)!==sid); renderAll(); refreshDrill();
+  apiWrite("delete", {id:sid});
 }
 
 /* ── GERENCIAL ── */
@@ -827,17 +827,17 @@ function drillCard(it) {
         <!-- actions -->
         <div class="flex flex-wrap gap-2 mt-2">
           ${it.status==="aguardando_resposta"?`
-          <button onclick="removeItem(${it.id})"
+          <button onclick="removeItem('${it.id}')"
                   class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
                          text-[11px] font-semibold px-2.5 py-1 rounded-lg">
             <i data-lucide="check" class="w-3 h-3"></i> Respondeu
           </button>
-          <button onclick="moverEstoque(${it.id})"
+          <button onclick="moverEstoque('${it.id}')"
                   class="flex items-center gap-1 border text-blue-600 hover:bg-blue-50
                          text-[11px] font-semibold px-2.5 py-1 rounded-lg" style="border-color:#3b82f6;">
             <i data-lucide="arrow-right" class="w-3 h-3"></i> Mover p/ Estoque
           </button>`:`
-          <button onclick="removeItem(${it.id})"
+          <button onclick="removeItem('${it.id}')"
                   class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
                          text-[11px] font-semibold px-2.5 py-1 rounded-lg">
             <i data-lucide="check" class="w-3 h-3"></i> Produto chegou
@@ -845,10 +845,10 @@ function drillCard(it) {
         </div>
       </div>
       <div class="flex flex-col gap-2 shrink-0">
-        <button onclick="openEditModal(${it.id})" class="text-gray-300 hover:text-blue-600 transition-colors">
+        <button onclick="openEditModal('${it.id}')" class="text-gray-300 hover:text-blue-600 transition-colors">
           <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
         </button>
-        <button onclick="deleteItem(${it.id})" class="text-gray-300 hover:text-red-500 transition-colors">
+        <button onclick="deleteItem('${it.id}')" class="text-gray-300 hover:text-red-500 transition-colors">
           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
         </button>
       </div>
@@ -858,8 +858,8 @@ function drillCard(it) {
 
 /* ── EDIT MODAL ── */
 function openEditModal(id) {
-  const it=itens.find(x=>x.id===id); if (!it) return;
-  editId=id;
+  const sid=String(id); const it=itens.find(x=>String(x.id)===sid); if (!it) return;
+  editId=sid;
   document.getElementById("eCliente").value   = it.cliente;
   document.getElementById("eTelefone").value  = it.telefone||"";
   document.getElementById("eProduto").value   = it.produto||"";
@@ -879,7 +879,7 @@ function validateEditForm() {
   document.getElementById("btnSalvarEdit").disabled=!ok;
 }
 function salvarEdicao() {
-  const it=itens.find(x=>x.id===editId); if (!it) return;
+  const it=itens.find(x=>String(x.id)===String(editId)); if (!it) return;
   it.cliente   = document.getElementById("eCliente").value.trim();
   it.telefone  = document.getElementById("eTelefone").value.trim();
   it.produto   = document.getElementById("eProduto").value.trim();
