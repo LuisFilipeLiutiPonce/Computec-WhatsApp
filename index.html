@@ -41,13 +41,24 @@
       </div>
       <span class="hidden sm:block text-blue-300 text-sm ml-1">| Painel WhatsApp</span>
     </div>
-    <div id="headerAlertBadge"
-         class="hidden items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full pulse-red text-sm font-bold select-none cursor-pointer"
-         onclick="drillOpen('alerta', null)">
-      <span id="headerAlertCount">0</span>
-      <span class="text-xs font-semibold">alerta(s) +24h</span>
+    <div class="flex items-center gap-3">
+      <!-- Sync status -->
+      <div id="syncStatus" class="hidden items-center gap-1.5 text-xs text-blue-100">
+        <span id="syncDot" class="w-2 h-2 rounded-full inline-block"></span>
+        <span id="syncTxt"></span>
+      </div>
+      <!-- Alert badge -->
+      <div id="headerAlertBadge"
+           class="hidden items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full pulse-red text-sm font-bold select-none cursor-pointer"
+           onclick="drillOpen('alerta', null)">
+        <span id="headerAlertCount">0</span>
+        <span class="text-xs font-semibold">alerta(s) +24h</span>
+      </div>
     </div>
   </div>
+  <!-- Notice bar -->
+  <div id="notice"
+       class="hidden max-w-6xl mx-auto px-4 pb-2 text-yellow-200 text-xs font-semibold"></div>
   <!-- Tabs -->
   <div class="max-w-6xl mx-auto px-4 flex mt-2 overflow-x-auto">
     <button onclick="switchTab('adicionar')" id="tab-adicionar"
@@ -348,8 +359,29 @@
   </div>
 </div>
 
+<!-- ═══════════════════════ LOADING OVERLAY ═══════════════════════ -->
+<div id="loadingOverlay" class="fixed inset-0 z-[100] flex flex-col items-center justify-center"
+     style="background:linear-gradient(135deg,#0d2d6b 0%,#1a4a9f 100%);">
+  <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+       style="background:#0a2259;border:2px solid rgba(255,255,255,.3);">
+    <span class="text-white font-black text-2xl">C</span>
+  </div>
+  <div class="text-white font-black text-lg mb-1">Computec Londrina</div>
+  <div class="text-blue-200 text-sm mb-6">Painel WhatsApp</div>
+  <div class="flex items-center gap-2 text-blue-200 text-sm">
+    <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+    </svg>
+    <span id="loadingMsg">Carregando dados...</span>
+  </div>
+</div>
+
 <!-- ═══════════════════════ SCRIPT ═══════════════════════ -->
 <script>
+/* ── CONFIG — cole a URL do Apps Script aqui após configurar ── */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDXgq0HO6sLpMcIbEFdfP52YKorPKFO_29p_PUS2ETRoWTIxyLSGeToBLnUb6rxC77/exec";
+
 /* ── CONSTANTS ── */
 const VENDEDORAS = ["Veridiane","Maria Luiza","Mislaine","Simone","Erika"];
 const STATUS_CFG = {
@@ -365,26 +397,85 @@ const filters = {
   estoque:  { vend:"Todas" },
 };
 
-/* ── PERSISTENCE ── */
-function save() { localStorage.setItem("ped_computec_v2", JSON.stringify(itens)); }
-function load() {
-  try { itens = JSON.parse(localStorage.getItem("ped_computec_v2")) || []; } catch(e){ itens=[]; }
-  // migrate old data
-  if (!itens.length) {
-    try {
-      const p = JSON.parse(localStorage.getItem("ped_computec"))||[];
-      const e = JSON.parse(localStorage.getItem("est_computec"))||[];
-      p.forEach(x => itens.push({ id:x.id||Date.now()+Math.random(), cliente:x.cliente||"",
-        telefone:x.telefone||"", produto:x.descricao||"", vendedora:x.vendedora||"",
-        status:(x.status==="aguardando_estoque")?"aguardando_estoque":"aguardando_resposta",
-        criadoEm:x.criadoEm||new Date().toISOString(), atualizadoEm:x.atualizadoEm||new Date().toISOString() }));
-      e.forEach(x => itens.push({ id:x.id||Date.now()+Math.random(), cliente:x.cliente||"",
-        telefone:x.telefone||"", produto:x.produto||"", vendedora:x.vendedora||"",
-        status:"aguardando_estoque", criadoEm:x.criadoEm||new Date().toISOString(),
-        atualizadoEm:x.criadoEm||new Date().toISOString() }));
-      if (itens.length) save();
-    } catch(e){}
+/* ── SYNC STATUS ── */
+function setSyncStatus(state, msg) {
+  const el = document.getElementById("syncStatus");
+  const dot = document.getElementById("syncDot");
+  const txt = document.getElementById("syncTxt");
+  if (state === "syncing") {
+    dot.style.background = "#facc15"; txt.textContent = "Sincronizando...";
+    el.classList.remove("hidden"); el.classList.add("flex");
+  } else if (state === "ok") {
+    dot.style.background = "#22c55e"; txt.textContent = "Salvo";
+    el.classList.remove("hidden"); el.classList.add("flex");
+    setTimeout(() => el.classList.add("hidden"), 2000);
+  } else if (state === "error") {
+    dot.style.background = "#ef4444"; txt.textContent = msg || "Erro ao salvar";
+    el.classList.remove("hidden"); el.classList.add("flex");
+    setTimeout(() => el.classList.add("hidden"), 4000);
   }
+}
+
+/* ── API ── */
+const apiConfigured = () => APPS_SCRIPT_URL && APPS_SCRIPT_URL !== "COLE_A_URL_AQUI";
+
+async function apiFetch(method, body) {
+  const opts = { method, redirect: "follow" };
+  if (method === "POST") {
+    // text/plain evita preflight CORS no Apps Script
+    opts.headers = { "Content-Type": "text/plain;charset=utf-8" };
+    opts.body = JSON.stringify(body);
+  }
+  const url  = method === "GET" ? APPS_SCRIPT_URL + "?action=getAll" : APPS_SCRIPT_URL;
+  const res  = await fetch(url, opts);
+  const text = await res.text();
+  try { return JSON.parse(text); } catch(e) { throw new Error("Resposta inválida do servidor"); }
+}
+
+/* ── PERSISTENCE ── */
+function saveLocal() { localStorage.setItem("ped_computec_v2", JSON.stringify(itens)); }
+function loadLocal() {
+  try { itens = JSON.parse(localStorage.getItem("ped_computec_v2")) || []; } catch(e){ itens=[]; }
+}
+
+async function loadData() {
+  if (!apiConfigured()) {
+    loadLocal(); hideLoading(); renderAll();
+    showNotice("⚠️ Modo offline — cole a URL do Apps Script no arquivo HTML para salvar na planilha.");
+    return;
+  }
+  try {
+    document.getElementById("loadingMsg").textContent = "Buscando dados da planilha...";
+    const data = await apiFetch("GET");
+    if (Array.isArray(data)) { itens = data; saveLocal(); }
+    else throw new Error(data.error || "Resposta inesperada");
+  } catch(err) {
+    loadLocal();
+    showNotice("⚠️ Não foi possível conectar à planilha. Usando dados locais.");
+  }
+  hideLoading(); renderAll();
+}
+
+async function apiWrite(action, payload) {
+  if (!apiConfigured()) { saveLocal(); return; }
+  setSyncStatus("syncing");
+  try {
+    const res = await apiFetch("POST", { action, ...payload });
+    if (res.error) throw new Error(res.error);
+    saveLocal(); setSyncStatus("ok");
+  } catch(err) {
+    setSyncStatus("error", "Erro: " + err.message);
+  }
+}
+
+function hideLoading() {
+  document.getElementById("loadingOverlay").style.display = "none";
+}
+
+function showNotice(msg) {
+  const el = document.getElementById("notice");
+  el.textContent = msg; el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 6000);
 }
 
 /* ── UTILS ── */
@@ -427,9 +518,11 @@ function adicionarItem() {
   const status    = document.getElementById("fCatResposta").checked
                     ? "aguardando_resposta" : "aguardando_estoque";
   if (!cliente||!produto) return;
-  const now = new Date().toISOString();
-  itens.push({id:Date.now(), cliente, telefone, produto, vendedora, status, criadoEm:now, atualizadoEm:now});
-  save(); renderAll();
+  const now  = new Date().toISOString();
+  const item = {id:String(Date.now()), cliente, telefone, produto, vendedora, status, criadoEm:now, atualizadoEm:now};
+  itens.push(item);
+  renderAll();
+  apiWrite("add", {item});
   // reset form
   document.getElementById("fCliente").value  = "";
   document.getElementById("fTelefone").value = "";
@@ -541,18 +634,21 @@ function removeItem(id) {
   const it=itens.find(x=>x.id===id); if (!it) return;
   const label=it.status==="aguardando_resposta"?"✓ Respondeu":"✓ Produto chegou";
   if (!confirm(`"${label}" para ${it.cliente}?\nO registro será removido.`)) return;
-  itens=itens.filter(x=>x.id!==id); save(); renderAll(); refreshDrill();
+  itens=itens.filter(x=>x.id!==id); renderAll(); refreshDrill();
+  apiWrite("delete", {id});
 }
 function moverEstoque(id) {
   const it=itens.find(x=>x.id===id); if (!it) return;
   if (!confirm(`Mover "${it.cliente}" para Aguardando Estoque?`)) return;
   it.status="aguardando_estoque"; it.atualizadoEm=new Date().toISOString();
-  save(); renderAll(); refreshDrill();
+  renderAll(); refreshDrill();
+  apiWrite("update", {item:it});
 }
 function deleteItem(id) {
   const it=itens.find(x=>x.id===id); if (!it) return;
   if (!confirm(`Excluir o registro de "${it.cliente}"?`)) return;
-  itens=itens.filter(x=>x.id!==id); save(); renderAll(); refreshDrill();
+  itens=itens.filter(x=>x.id!==id); renderAll(); refreshDrill();
+  apiWrite("delete", {id});
 }
 
 /* ── GERENCIAL ── */
@@ -790,7 +886,8 @@ function salvarEdicao() {
   it.vendedora = document.getElementById("eVendedora").value;
   it.status    = document.getElementById("eStatus").value;
   it.atualizadoEm = new Date().toISOString();
-  save(); closeEditModal(); renderAll(); refreshDrill();
+  closeEditModal(); renderAll(); refreshDrill();
+  apiWrite("update", {item:it});
 }
 document.getElementById("editModal").addEventListener("click",e=>{
   if(e.target===document.getElementById("editModal")) closeEditModal();
@@ -826,9 +923,18 @@ function renderAll() {
   if(!document.getElementById("tabGerencial").classList.contains("hidden")) renderGerencial();
 }
 
+/* ── AUTO-REFRESH a cada 60s ── */
+setInterval(async () => {
+  if (!apiConfigured()) return;
+  try {
+    const data = await apiFetch("GET");
+    if (Array.isArray(data)) { itens = data; saveLocal(); renderAll(); refreshDrill(); }
+  } catch(e) {}
+}, 60000);
+
 /* ── INIT ── */
 document.addEventListener("DOMContentLoaded", ()=>{
-  load(); populateSelects(); switchTab("gerencial"); renderAll();
+  populateSelects(); switchTab("gerencial"); loadData();
 });
 </script>
 </body>
