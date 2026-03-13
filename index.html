@@ -14,9 +14,15 @@
   .item-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.13); }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
   .pulse-red { animation: blink 1.8s infinite; }
-  .modal-overlay { background: rgba(0,0,0,0.52); }
   .chip-active  { background: #0d2d6b !important; color: #fff !important; border-color: #0d2d6b !important; }
   .chip-inactive{ background: #f1f5f9; color: #374151; border-color: #e2e8f0; }
+  /* Drill-down panel slide */
+  #drillPanel { transition: transform .25s ease, opacity .25s ease; }
+  #drillPanel.open  { transform: translateX(0);   opacity: 1; pointer-events: auto; }
+  #drillPanel.closed{ transform: translateX(100%); opacity: 0; pointer-events: none; }
+  #drillOverlay { transition: opacity .25s ease; }
+  #drillOverlay.open  { opacity: 1; pointer-events: auto; }
+  #drillOverlay.closed{ opacity: 0; pointer-events: none; }
 </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -24,8 +30,6 @@
 <!-- ═══════════════════════ HEADER ═══════════════════════ -->
 <header style="background:linear-gradient(135deg,#0d2d6b 0%,#1a4a9f 100%);" class="shadow-xl">
   <div class="max-w-6xl mx-auto px-4 pt-3 pb-0 flex items-center justify-between">
-
-    <!-- Logo -->
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
            style="background:#0a2259;border:2px solid rgba(255,255,255,.25);">
@@ -37,30 +41,32 @@
       </div>
       <span class="hidden sm:block text-blue-300 text-sm ml-1">| Painel WhatsApp</span>
     </div>
-
-    <!-- Alert badge -->
     <div id="headerAlertBadge"
-         class="hidden items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full pulse-red text-sm font-bold select-none">
+         class="hidden items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full pulse-red text-sm font-bold select-none cursor-pointer"
+         onclick="drillOpen('alerta', null)">
       <span id="headerAlertCount">0</span>
       <span class="text-xs font-semibold">alerta(s) +24h</span>
     </div>
   </div>
-
   <!-- Tabs -->
-  <div class="max-w-6xl mx-auto px-4 flex mt-2">
+  <div class="max-w-6xl mx-auto px-4 flex mt-2 overflow-x-auto">
+    <button onclick="switchTab('adicionar')" id="tab-adicionar"
+            class="tab-inactive px-5 py-3 text-sm transition-all whitespace-nowrap">
+      ➕ Adicionar
+    </button>
+    <button onclick="switchTab('gerencial')" id="tab-gerencial"
+            class="tab-active px-5 py-3 text-sm transition-all whitespace-nowrap">
+      📊 Gerencial
+    </button>
     <button onclick="switchTab('resposta')" id="tab-resposta"
-            class="tab-active px-6 py-3 text-sm transition-all">
+            class="tab-inactive px-5 py-3 text-sm transition-all whitespace-nowrap">
       🟡 Aguardando Resposta
       <span id="badgeResposta" class="hidden ml-1.5 bg-yellow-400 text-gray-900 text-xs font-black px-2 py-0.5 rounded-full"></span>
     </button>
     <button onclick="switchTab('estoque')" id="tab-estoque"
-            class="tab-inactive px-6 py-3 text-sm transition-all">
+            class="tab-inactive px-5 py-3 text-sm transition-all whitespace-nowrap">
       🔵 Aguardando Estoque
       <span id="badgeEstoque" class="hidden ml-1.5 bg-blue-400 text-white text-xs font-black px-2 py-0.5 rounded-full"></span>
-    </button>
-    <button onclick="switchTab('gerencial')" id="tab-gerencial"
-            class="tab-inactive px-6 py-3 text-sm transition-all">
-      📊 Gerencial
     </button>
   </div>
 </header>
@@ -68,20 +74,155 @@
 <!-- ═══════════════════════ MAIN ═══════════════════════ -->
 <main class="max-w-6xl mx-auto px-4 py-6">
 
-  <!-- ──────── TAB: AGUARDANDO RESPOSTA ──────── -->
-  <div id="tabResposta">
+  <!-- ══ TAB: ADICIONAR ══ -->
+  <div id="tabAdicionar" class="hidden">
+    <div class="max-w-lg mx-auto">
+      <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div style="background:#0d2d6b;" class="px-6 py-5">
+          <h2 class="text-white font-black text-xl">Novo Registro</h2>
+          <p class="text-blue-200 text-sm mt-0.5">Preencha os dados do cliente</p>
+        </div>
+        <div class="p-6 space-y-4">
+
+          <!-- Categoria -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Categoria *</label>
+            <div class="grid grid-cols-2 gap-3">
+              <label id="catRespostaLabel"
+                     class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all border-yellow-400 bg-yellow-50">
+                <input type="radio" name="fCategoria" value="aguardando_resposta" id="fCatResposta" checked
+                       class="accent-yellow-400" onchange="updateCatStyle()">
+                <div>
+                  <div class="font-bold text-sm text-gray-800">🟡 Aguardando</div>
+                  <div class="text-xs text-gray-500">Resposta</div>
+                </div>
+              </label>
+              <label id="catEstoqueLabel"
+                     class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all border-gray-200 bg-white">
+                <input type="radio" name="fCategoria" value="aguardando_estoque" id="fCatEstoque"
+                       class="accent-blue-500" onchange="updateCatStyle()">
+                <div>
+                  <div class="font-bold text-sm text-gray-800">🔵 Aguardando</div>
+                  <div class="text-xs text-gray-500">Estoque</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Cliente -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Cliente *</label>
+            <input id="fCliente" type="text" placeholder="Nome do cliente"
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm
+                          focus:outline-none focus:ring-2 focus:ring-blue-200"
+                   oninput="validateAddForm()">
+          </div>
+
+          <!-- Telefone -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Telefone WhatsApp</label>
+            <input id="fTelefone" type="text" placeholder="(43) 99999-9999"
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm
+                          focus:outline-none focus:ring-2 focus:ring-blue-200">
+          </div>
+
+          <!-- Produto -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Produto / Pedido *</label>
+            <textarea id="fProduto" rows="3" placeholder="Descreva o produto ou pedido..."
+                      class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                      oninput="validateAddForm()"></textarea>
+          </div>
+
+          <!-- Vendedora -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Vendedora</label>
+            <select id="fVendedora"
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-blue-200">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+
+          <!-- Submit -->
+          <button id="btnAdicionar" onclick="adicionarItem()" disabled
+                  style="background:#0d2d6b;"
+                  class="w-full text-white py-3 rounded-xl font-bold text-sm hover:opacity-90
+                         disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Registro
+          </button>
+
+          <!-- Success msg -->
+          <div id="addSuccess"
+               class="hidden text-center py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-semibold">
+            ✅ Registro adicionado com sucesso!
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: GERENCIAL ══ -->
+  <div id="tabGerencial">
+
+    <!-- KPI row -->
+    <div class="grid grid-cols-3 gap-4 mb-5">
+      <!-- Resposta -->
+      <div onclick="drillOpen('status','aguardando_resposta')"
+           class="bg-white rounded-xl border border-slate-100 shadow-sm p-5 cursor-pointer
+                  hover:shadow-md transition-shadow group" style="border-top:4px solid #f59e0b;">
+        <div id="kpiResposta" class="text-4xl font-black text-yellow-500">0</div>
+        <div class="text-sm text-gray-500 mt-1 font-semibold">🟡 Aguardando Resposta</div>
+        <div class="text-xs text-gray-400 mt-2 group-hover:text-blue-600 transition-colors flex items-center gap-1">
+          Ver detalhes <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        </div>
+      </div>
+      <!-- Estoque -->
+      <div onclick="drillOpen('status','aguardando_estoque')"
+           class="bg-white rounded-xl border border-slate-100 shadow-sm p-5 cursor-pointer
+                  hover:shadow-md transition-shadow group" style="border-top:4px solid #3b82f6;">
+        <div id="kpiEstoque" class="text-4xl font-black text-blue-500">0</div>
+        <div class="text-sm text-gray-500 mt-1 font-semibold">🔵 Aguardando Estoque</div>
+        <div class="text-xs text-gray-400 mt-2 group-hover:text-blue-600 transition-colors flex items-center gap-1">
+          Ver detalhes <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        </div>
+      </div>
+      <!-- Alertas -->
+      <div onclick="drillOpen('alerta', null)"
+           class="bg-white rounded-xl border border-slate-100 shadow-sm p-5 cursor-pointer
+                  hover:shadow-md transition-shadow group" style="border-top:4px solid #ef4444;">
+        <div id="kpiAlertas" class="text-4xl font-black text-red-500">0</div>
+        <div class="text-sm text-gray-500 mt-1 font-semibold">⚠️ Alertas +24h</div>
+        <div class="text-xs text-gray-400 mt-2 group-hover:text-blue-600 transition-colors flex items-center gap-1">
+          Ver detalhes <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bar chart -->
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-5">
+      <h3 class="text-base font-black text-gray-800 mb-1">Itens em Aberto por Vendedora</h3>
+      <p class="text-xs text-gray-400 mb-4">Clique em uma vendedora para ver os detalhes</p>
+      <div id="gerChart"></div>
+    </div>
+
+    <!-- Vendedora × Status matrix -->
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+      <h3 class="text-base font-black text-gray-800 mb-4">Detalhamento por Vendedora × Status</h3>
+      <div id="gerMatrix"></div>
+    </div>
+
+  </div>
+
+  <!-- ══ TAB: AGUARDANDO RESPOSTA ══ -->
+  <div id="tabResposta" class="hidden">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
       <div>
         <h2 class="text-xl font-black text-gray-800">🟡 Aguardando Resposta</h2>
         <p class="text-sm text-gray-500 mt-0.5">Clientes que ainda não retornaram</p>
       </div>
-      <button onclick="openModal('aguardando_resposta')"
-              style="background:#0d2d6b;"
-              class="text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 flex items-center gap-1.5 shrink-0">
-        <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
-      </button>
     </div>
-    <!-- Filters -->
     <div class="bg-white rounded-xl border border-slate-100 shadow-sm px-4 pt-3 pb-4 mb-4">
       <div class="flex flex-wrap gap-3 items-center">
         <div class="relative flex-1 min-w-[180px]">
@@ -100,20 +241,14 @@
     <div id="listaResposta"></div>
   </div>
 
-  <!-- ──────── TAB: AGUARDANDO ESTOQUE ──────── -->
+  <!-- ══ TAB: AGUARDANDO ESTOQUE ══ -->
   <div id="tabEstoque" class="hidden">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
       <div>
         <h2 class="text-xl font-black text-gray-800">🔵 Aguardando Estoque</h2>
         <p class="text-sm text-gray-500 mt-0.5">Produtos aguardando chegada no estoque</p>
       </div>
-      <button onclick="openModal('aguardando_estoque')"
-              style="background:#0d2d6b;"
-              class="text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 flex items-center gap-1.5 shrink-0">
-        <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
-      </button>
     </div>
-    <!-- Filters -->
     <div class="bg-white rounded-xl border border-slate-100 shadow-sm px-4 pt-3 pb-4 mb-4">
       <div class="flex flex-wrap gap-3 items-center">
         <div class="relative flex-1 min-w-[180px]">
@@ -132,111 +267,84 @@
     <div id="listaEstoque"></div>
   </div>
 
-  <!-- ──────── TAB: GERENCIAL ──────── -->
-  <div id="tabGerencial" class="hidden">
-    <!-- KPIs -->
-    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
-      <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6" style="border-top:4px solid #f59e0b;">
-        <div id="kpiResposta" class="text-4xl font-black text-yellow-500">0</div>
-        <div class="text-sm text-gray-500 mt-1 font-semibold">🟡 Aguardando Resposta</div>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6" style="border-top:4px solid #3b82f6;">
-        <div id="kpiEstoque" class="text-4xl font-black text-blue-500">0</div>
-        <div class="text-sm text-gray-500 mt-1 font-semibold">🔵 Aguardando Estoque</div>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6 col-span-2 lg:col-span-1" style="border-top:4px solid #ef4444;">
-        <div id="kpiAlertas" class="text-4xl font-black text-red-500">0</div>
-        <div class="text-sm text-gray-500 mt-1 font-semibold">⚠️ Alertas +24h sem mov.</div>
-      </div>
-    </div>
-
-    <!-- Bar chart -->
-    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-5">
-      <h3 class="text-base font-black text-gray-800 mb-4">Itens em Aberto por Vendedora</h3>
-      <div id="gerChart"></div>
-    </div>
-
-    <!-- Alerts -->
-    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-5">
-      <h3 class="text-base font-black text-gray-800 mb-4 flex items-center gap-2">
-        <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i>
-        Alertas — +24h sem movimentação
-      </h3>
-      <div id="gerAlerts"></div>
-    </div>
-  </div>
-
 </main>
 
-<!-- ═══════════════════════ MODAL ═══════════════════════ -->
-<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay p-4">
+<!-- ═══════════════════════ DRILL-DOWN PANEL ═══════════════════════ -->
+<!-- Overlay -->
+<div id="drillOverlay"
+     class="fixed inset-0 z-40 closed"
+     style="background:rgba(0,0,0,0.45);"
+     onclick="drillClose()"></div>
+
+<!-- Side panel -->
+<div id="drillPanel"
+     class="fixed top-0 right-0 h-full w-full max-w-lg z-50 closed
+            bg-white shadow-2xl flex flex-col">
+  <!-- panel header -->
+  <div id="drillHeader" style="background:#0d2d6b;"
+       class="text-white px-5 py-4 flex items-center justify-between shrink-0">
+    <div>
+      <div id="drillTitle" class="font-black text-lg leading-tight"></div>
+      <div id="drillSub"   class="text-blue-200 text-xs mt-0.5"></div>
+    </div>
+    <button onclick="drillClose()" class="hover:text-blue-200 transition-colors">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+  </div>
+  <!-- panel body -->
+  <div id="drillBody" class="flex-1 overflow-y-auto p-4"></div>
+</div>
+
+<!-- ═══════════════════════ EDIT MODAL ═══════════════════════ -->
+<div id="editModal" class="fixed inset-0 z-60 hidden items-center justify-center p-4"
+     style="background:rgba(0,0,0,0.52);">
   <div class="bg-white rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl">
-    <!-- header -->
-    <div id="modalHeader" style="background:#0d2d6b;"
-         class="text-white px-6 py-4 rounded-t-2xl flex items-center justify-between shrink-0">
-      <h3 id="modalTitle" class="font-bold text-lg">Adicionar</h3>
-      <button onclick="closeModal()" class="hover:text-blue-200 transition-colors">
+    <div style="background:#0d2d6b;" class="text-white px-6 py-4 rounded-t-2xl flex items-center justify-between shrink-0">
+      <h3 class="font-bold text-lg">Editar Registro</h3>
+      <button onclick="closeEditModal()" class="hover:text-blue-200 transition-colors">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
-    <!-- body -->
     <div class="overflow-y-auto p-6 flex-1 space-y-4">
-
-      <!-- Cliente -->
       <div>
         <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Cliente *</label>
-        <input id="fCliente" type="text" placeholder="Nome do cliente"
-               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                      focus:outline-none focus:ring-2 focus:ring-blue-200"
-               oninput="validateModal()">
+        <input id="eCliente" type="text"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+               oninput="validateEditForm()">
       </div>
-
-      <!-- Telefone -->
       <div>
-        <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Telefone WhatsApp</label>
-        <input id="fTelefone" type="text" placeholder="(43) 99999-9999"
-               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                      focus:outline-none focus:ring-2 focus:ring-blue-200">
+        <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Telefone</label>
+        <input id="eTelefone" type="text"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
       </div>
-
-      <!-- Produto / Pedido -->
       <div>
         <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Produto / Pedido *</label>
-        <textarea id="fProduto" rows="3" placeholder="Descreva o produto ou pedido..."
-                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
-                  oninput="validateModal()"></textarea>
+        <textarea id="eProduto" rows="3"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                  oninput="validateEditForm()"></textarea>
       </div>
-
-      <!-- Vendedora -->
       <div>
         <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Vendedora</label>
-        <select id="fVendedora"
-                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-blue-200">
+        <select id="eVendedora"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
           <option value="">Selecione...</option>
         </select>
       </div>
-
-      <!-- Status -->
       <div>
         <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Categoria</label>
-        <select id="fStatus"
-                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-blue-200">
+        <select id="eStatus"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
           <option value="aguardando_resposta">🟡 Aguardando Resposta</option>
           <option value="aguardando_estoque">🔵 Aguardando Estoque</option>
         </select>
       </div>
-
     </div>
-    <!-- footer -->
     <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
-      <button onclick="closeModal()"
+      <button onclick="closeEditModal()"
               class="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
         Cancelar
       </button>
-      <button id="btnSalvar" onclick="salvar()" disabled
+      <button id="btnSalvarEdit" onclick="salvarEdicao()" disabled
               style="background:#0d2d6b;"
               class="text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90
                      disabled:opacity-40 disabled:cursor-not-allowed">
@@ -250,288 +358,207 @@
 <script>
 /* ── CONSTANTS ── */
 const VENDEDORAS = ["Veridiane","Maria Luiza","Mislaine","Simone","Erika"];
-
 const STATUS_CFG = {
   aguardando_resposta: { label:"Aguardando Resposta", cor:"#f59e0b", emoji:"🟡" },
   aguardando_estoque:  { label:"Aguardando Estoque",  cor:"#3b82f6", emoji:"🔵" },
 };
 
 /* ── STATE ── */
-let itens  = [];           // todos os registros
+let itens  = [];
 let editId = null;
-
-// filter state per tab
 const filters = {
-  resposta: { vend:"Todas", search:"" },
-  estoque:  { vend:"Todas", search:"" },
+  resposta: { vend:"Todas" },
+  estoque:  { vend:"Todas" },
 };
 
 /* ── PERSISTENCE ── */
 function save() { localStorage.setItem("ped_computec_v2", JSON.stringify(itens)); }
 function load() {
-  try { itens = JSON.parse(localStorage.getItem("ped_computec_v2")) || []; }
-  catch(e) { itens = []; }
-
-  // Migrar dados antigos se existirem
-  const migResposta = localStorage.getItem("ped_computec");
-  const migEstoque  = localStorage.getItem("est_computec");
-  if (!itens.length && (migResposta || migEstoque)) {
+  try { itens = JSON.parse(localStorage.getItem("ped_computec_v2")) || []; } catch(e){ itens=[]; }
+  // migrate old data
+  if (!itens.length) {
     try {
-      const p = JSON.parse(migResposta)||[];
-      const e = JSON.parse(migEstoque)||[];
-      p.forEach(x => itens.push({
-        id: x.id||Date.now()+Math.random(),
-        cliente: x.cliente||"", telefone: x.telefone||"",
-        produto: x.descricao||"", vendedora: x.vendedora||"",
-        status: (x.status==="aguardando_estoque") ? "aguardando_estoque" : "aguardando_resposta",
-        criadoEm: x.criadoEm||new Date().toISOString(),
-        atualizadoEm: x.atualizadoEm||new Date().toISOString(),
-      }));
-      e.forEach(x => itens.push({
-        id: x.id||Date.now()+Math.random(),
-        cliente: x.cliente||"", telefone: x.telefone||"",
-        produto: x.produto||"", vendedora: x.vendedora||"",
-        status: "aguardando_estoque",
-        criadoEm: x.criadoEm||new Date().toISOString(),
-        atualizadoEm: x.criadoEm||new Date().toISOString(),
-      }));
-      save();
-    } catch(e) {}
+      const p = JSON.parse(localStorage.getItem("ped_computec"))||[];
+      const e = JSON.parse(localStorage.getItem("est_computec"))||[];
+      p.forEach(x => itens.push({ id:x.id||Date.now()+Math.random(), cliente:x.cliente||"",
+        telefone:x.telefone||"", produto:x.descricao||"", vendedora:x.vendedora||"",
+        status:(x.status==="aguardando_estoque")?"aguardando_estoque":"aguardando_resposta",
+        criadoEm:x.criadoEm||new Date().toISOString(), atualizadoEm:x.atualizadoEm||new Date().toISOString() }));
+      e.forEach(x => itens.push({ id:x.id||Date.now()+Math.random(), cliente:x.cliente||"",
+        telefone:x.telefone||"", produto:x.produto||"", vendedora:x.vendedora||"",
+        status:"aguardando_estoque", criadoEm:x.criadoEm||new Date().toISOString(),
+        atualizadoEm:x.criadoEm||new Date().toISOString() }));
+      if (itens.length) save();
+    } catch(e){}
   }
 }
 
 /* ── UTILS ── */
-const fmt   = iso => iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
-const hours = iso => iso ? (Date.now()-new Date(iso))/3600000 : 0;
-const isAlert = it => hours(it.atualizadoEm) >= 24;
-const esc   = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmt    = iso => iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
+const hours  = iso => iso ? (Date.now()-new Date(iso))/3600000 : 0;
+const isAlert= it  => hours(it.atualizadoEm) >= 24;
+const esc    = s   => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
 /* ── TABS ── */
 function switchTab(t) {
-  ["resposta","estoque","gerencial"].forEach(x => {
+  ["adicionar","gerencial","resposta","estoque"].forEach(x => {
     const cap = x[0].toUpperCase()+x.slice(1);
     document.getElementById("tab"+cap).classList.add("hidden");
-    document.getElementById("tab-"+x).className = "tab-inactive px-6 py-3 text-sm transition-all";
+    document.getElementById("tab-"+x).className = "tab-inactive px-5 py-3 text-sm transition-all whitespace-nowrap";
   });
   const cap = t[0].toUpperCase()+t.slice(1);
   document.getElementById("tab"+cap).classList.remove("hidden");
-  document.getElementById("tab-"+t).className = "tab-active px-6 py-3 text-sm transition-all";
-  if (t === "gerencial") renderGerencial();
+  document.getElementById("tab-"+t).className = "tab-active px-5 py-3 text-sm transition-all whitespace-nowrap";
+  if (t==="gerencial") renderGerencial();
+}
+
+/* ── ADD FORM ── */
+function updateCatStyle() {
+  const isRes = document.getElementById("fCatResposta").checked;
+  document.getElementById("catRespostaLabel").className =
+    `flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${isRes?"border-yellow-400 bg-yellow-50":"border-gray-200 bg-white"}`;
+  document.getElementById("catEstoqueLabel").className =
+    `flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${!isRes?"border-blue-400 bg-blue-50":"border-gray-200 bg-white"}`;
+}
+function validateAddForm() {
+  const ok = document.getElementById("fCliente").value.trim() &&
+             document.getElementById("fProduto").value.trim();
+  document.getElementById("btnAdicionar").disabled = !ok;
+}
+function adicionarItem() {
+  const cliente   = document.getElementById("fCliente").value.trim();
+  const telefone  = document.getElementById("fTelefone").value.trim();
+  const produto   = document.getElementById("fProduto").value.trim();
+  const vendedora = document.getElementById("fVendedora").value;
+  const status    = document.getElementById("fCatResposta").checked
+                    ? "aguardando_resposta" : "aguardando_estoque";
+  if (!cliente||!produto) return;
+  const now = new Date().toISOString();
+  itens.push({id:Date.now(), cliente, telefone, produto, vendedora, status, criadoEm:now, atualizadoEm:now});
+  save(); renderAll();
+  // reset form
+  document.getElementById("fCliente").value  = "";
+  document.getElementById("fTelefone").value = "";
+  document.getElementById("fProduto").value  = "";
+  document.getElementById("fVendedora").value= "";
+  document.getElementById("fCatResposta").checked = true;
+  updateCatStyle(); validateAddForm();
+  // success flash
+  const s = document.getElementById("addSuccess");
+  s.classList.remove("hidden");
+  setTimeout(()=>s.classList.add("hidden"), 2500);
 }
 
 /* ── CHIPS ── */
 function renderChips(tab) {
-  const key = tab==="resposta" ? "Resposta" : "Estoque";
+  const key = tab==="resposta"?"Resposta":"Estoque";
   const f   = filters[tab];
   document.getElementById("chips"+key).innerHTML =
     ["Todas",...VENDEDORAS].map(v =>
-      `<button onclick="setVend('${tab}','${v}')"
+      `<button onclick="setVend('${tab}','${esc(v)}')"
         class="px-3 py-1 rounded-full text-xs font-semibold border transition-all
                ${f.vend===v?"chip-active":"chip-inactive hover:border-gray-400"}">${v}</button>`
     ).join("");
 }
+function setVend(tab, v) { filters[tab].vend=v; renderChips(tab); renderLista(tab); }
 
-function setVend(tab, v) {
-  filters[tab].vend = v;
-  renderChips(tab);
-  renderLista(tab);
-}
-
-/* ── CARD ── */
+/* ── ITEM CARD (for tabs) ── */
 function makeCard(it) {
-  const cfg   = STATUS_CFG[it.status];
-  const al    = isAlert(it);
-  const borda = al ? "#ef4444" : cfg.cor;
-  const h     = Math.floor(hours(it.atualizadoEm));
+  const cfg  = STATUS_CFG[it.status];
+  const al   = isAlert(it);
+  const borda= al?"#ef4444":cfg.cor;
+  const h    = Math.floor(hours(it.atualizadoEm));
+  const bAl  = al?`<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold ml-1"
+    style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;">${h}h sem mov.</span>`:"";
 
-  const bAlert = al
-    ? `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold ml-1"
-             style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;">${h}h sem mov.</span>` : "";
-
-  // action button(s) differ per status
-  let actions = "";
-  if (it.status === "aguardando_resposta") {
-    actions = `
-      <div class="flex flex-wrap gap-2 mt-2">
-        <button onclick="removeItem(${it.id},'✓ Respondeu')"
-                class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
-                       text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-          <i data-lucide="check" class="w-3 h-3"></i> Respondeu
-        </button>
-        <button onclick="moverParaEstoque(${it.id})"
-                class="flex items-center gap-1 border text-blue-600 hover:bg-blue-50
-                       text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                style="border-color:#3b82f6;">
-          <i data-lucide="arrow-right" class="w-3 h-3"></i> Mover p/ Estoque
-        </button>
-      </div>`;
-  } else {
-    actions = `
-      <div class="mt-2">
-        <button onclick="removeItem(${it.id},'✓ Produto chegou')"
-                class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
-                       text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-          <i data-lucide="check" class="w-3 h-3"></i> Produto chegou
-        </button>
-      </div>`;
-  }
+  let actions = it.status==="aguardando_resposta" ? `
+    <div class="flex flex-wrap gap-2 mt-2">
+      <button onclick="removeItem(${it.id})"
+              class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
+                     text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+        <i data-lucide="check" class="w-3 h-3"></i> Respondeu
+      </button>
+      <button onclick="moverEstoque(${it.id})"
+              class="flex items-center gap-1 border text-blue-600 hover:bg-blue-50
+                     text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+              style="border-color:#3b82f6;">
+        <i data-lucide="arrow-right" class="w-3 h-3"></i> Mover p/ Estoque
+      </button>
+    </div>` : `
+    <div class="mt-2">
+      <button onclick="removeItem(${it.id})"
+              class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
+                     text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+        <i data-lucide="check" class="w-3 h-3"></i> Produto chegou
+      </button>
+    </div>`;
 
   return `
   <div class="item-card bg-white rounded-xl border border-slate-100 shadow-sm mb-3 overflow-hidden"
        style="border-left:4px solid ${borda};">
-    <div class="p-4">
-      <div class="flex items-start gap-3">
-        <div class="flex-1 min-w-0">
-          <!-- Nome + alert -->
-          <div class="flex flex-wrap items-center gap-1 mb-1">
-            <span class="font-bold text-gray-900">${esc(it.cliente)}</span>${bAlert}
-          </div>
-          <!-- Info row -->
-          <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-500 mb-1">
-            ${it.telefone?`<span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i>${esc(it.telefone)}</span>`:""}
-            ${it.vendedora?`<span class="flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i>${esc(it.vendedora)}</span>`:""}
-            <span class="flex items-center gap-1 text-gray-400"><i data-lucide="calendar" class="w-3 h-3"></i>${fmt(it.criadoEm)}</span>
-          </div>
-          <!-- Produto -->
-          ${it.produto?`<div class="text-sm text-gray-600 italic mt-1">${esc(it.produto)}</div>`:""}
-          <!-- Actions -->
-          ${actions}
+    <div class="p-4 flex items-start gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-1 mb-1">
+          <span class="font-bold text-gray-900">${esc(it.cliente)}</span>${bAl}
         </div>
-        <!-- Edit/Delete -->
-        <div class="flex flex-col gap-2 shrink-0">
-          <button onclick="openModal(null,${it.id})"
-                  class="text-gray-300 hover:text-blue-600 transition-colors" title="Editar">
-            <i data-lucide="pencil" class="w-4 h-4"></i>
-          </button>
-          <button onclick="deleteItem(${it.id})"
-                  class="text-gray-300 hover:text-red-500 transition-colors" title="Excluir">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+        <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-500 mb-1">
+          ${it.telefone?`<span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i>${esc(it.telefone)}</span>`:""}
+          ${it.vendedora?`<span class="flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i>${esc(it.vendedora)}</span>`:""}
+          <span class="flex items-center gap-1 text-gray-400"><i data-lucide="calendar" class="w-3 h-3"></i>${fmt(it.criadoEm)}</span>
         </div>
+        ${it.produto?`<div class="text-sm text-gray-500 italic">${esc(it.produto)}</div>`:""}
+        ${actions}
+      </div>
+      <div class="flex flex-col gap-2 shrink-0">
+        <button onclick="openEditModal(${it.id})" class="text-gray-300 hover:text-blue-600 transition-colors" title="Editar">
+          <i data-lucide="pencil" class="w-4 h-4"></i>
+        </button>
+        <button onclick="deleteItem(${it.id})" class="text-gray-300 hover:text-red-500 transition-colors" title="Excluir">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
       </div>
     </div>
   </div>`;
 }
 
-/* ── RENDER LISTA ── */
+/* ── RENDER LISTA TABS ── */
 function renderLista(tab) {
   const status = "aguardando_"+tab;
-  const f      = filters[tab];
-  const q      = (tab==="resposta"
-    ? document.getElementById("searchResposta")
-    : document.getElementById("searchEstoque")).value.toLowerCase().trim();
-
+  const f = filters[tab];
+  const q = document.getElementById(tab==="resposta"?"searchResposta":"searchEstoque").value.toLowerCase().trim();
   const lista = itens
-    .filter(it => it.status===status)
-    .filter(it => !q || it.cliente.toLowerCase().includes(q) || (it.produto||"").toLowerCase().includes(q))
-    .filter(it => f.vend==="Todas" || it.vendedora===f.vend)
-    .sort((a,b) => new Date(b.criadoEm)-new Date(a.criadoEm));
-
-  const elId = tab==="resposta" ? "listaResposta" : "listaEstoque";
-  const el   = document.getElementById(elId);
-
+    .filter(it=>it.status===status)
+    .filter(it=>!q||it.cliente.toLowerCase().includes(q)||(it.produto||"").toLowerCase().includes(q))
+    .filter(it=>f.vend==="Todas"||it.vendedora===f.vend)
+    .sort((a,b)=>new Date(b.criadoEm)-new Date(a.criadoEm));
+  const el = document.getElementById(tab==="resposta"?"listaResposta":"listaEstoque");
   if (!lista.length) {
-    const msg = tab==="resposta"
-      ? "Nenhum cliente aguardando resposta"
-      : "Nenhum produto aguardando no estoque";
-    el.innerHTML = `
-    <div class="text-center py-16 text-gray-400">
+    el.innerHTML=`<div class="text-center py-16 text-gray-400">
       <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-4 opacity-25"></i>
-      <div class="text-lg font-black text-gray-400 mb-1">${msg}</div>
-      <div class="text-sm">Clique em <strong>Adicionar</strong> para registrar</div>
+      <div class="text-lg font-black text-gray-400 mb-1">Nenhum registro encontrado</div>
+      <div class="text-sm">Use a aba <strong>➕ Adicionar</strong> para registrar</div>
     </div>`;
-  } else {
-    el.innerHTML = lista.map(makeCard).join("");
-  }
+  } else { el.innerHTML=lista.map(makeCard).join(""); }
   lucide.createIcons();
 }
 
-/* ── ACTIONS ── */
-function removeItem(id, label) {
-  const it = itens.find(x=>x.id===id); if (!it) return;
+/* ── ITEM ACTIONS ── */
+function removeItem(id) {
+  const it=itens.find(x=>x.id===id); if (!it) return;
+  const label=it.status==="aguardando_resposta"?"✓ Respondeu":"✓ Produto chegou";
   if (!confirm(`"${label}" para ${it.cliente}?\nO registro será removido.`)) return;
-  itens = itens.filter(x=>x.id!==id);
-  save(); renderAll();
+  itens=itens.filter(x=>x.id!==id); save(); renderAll(); refreshDrill();
 }
-
-function moverParaEstoque(id) {
-  const it = itens.find(x=>x.id===id); if (!it) return;
+function moverEstoque(id) {
+  const it=itens.find(x=>x.id===id); if (!it) return;
   if (!confirm(`Mover "${it.cliente}" para Aguardando Estoque?`)) return;
-  it.status = "aguardando_estoque";
-  it.atualizadoEm = new Date().toISOString();
-  save(); renderAll();
+  it.status="aguardando_estoque"; it.atualizadoEm=new Date().toISOString();
+  save(); renderAll(); refreshDrill();
 }
-
 function deleteItem(id) {
-  const it = itens.find(x=>x.id===id); if (!it) return;
+  const it=itens.find(x=>x.id===id); if (!it) return;
   if (!confirm(`Excluir o registro de "${it.cliente}"?`)) return;
-  itens = itens.filter(x=>x.id!==id);
-  save(); renderAll();
-}
-
-/* ── MODAL ── */
-function openModal(defaultStatus=null, id=null) {
-  editId = id;
-  const titulo = id ? "Editar Registro" : "Adicionar";
-  document.getElementById("modalTitle").textContent = titulo;
-
-  if (id) {
-    const it = itens.find(x=>x.id===id); if (!it) return;
-    document.getElementById("fCliente").value   = it.cliente;
-    document.getElementById("fTelefone").value  = it.telefone||"";
-    document.getElementById("fProduto").value   = it.produto||"";
-    document.getElementById("fVendedora").value = it.vendedora||"";
-    document.getElementById("fStatus").value    = it.status;
-  } else {
-    document.getElementById("fCliente").value   = "";
-    document.getElementById("fTelefone").value  = "";
-    document.getElementById("fProduto").value   = "";
-    document.getElementById("fVendedora").value = "";
-    document.getElementById("fStatus").value    = defaultStatus||"aguardando_resposta";
-  }
-
-  // color modal header by status
-  const st  = document.getElementById("fStatus").value;
-  const cor = st==="aguardando_estoque" ? "#1d4ed8" : "#0d2d6b";
-  document.getElementById("modalHeader").style.background = cor;
-  document.getElementById("fStatus").addEventListener("change", e => {
-    document.getElementById("modalHeader").style.background =
-      e.target.value==="aguardando_estoque" ? "#1d4ed8" : "#0d2d6b";
-  }, {once:true});
-
-  validateModal();
-  document.getElementById("modal").classList.remove("hidden");
-  document.getElementById("modal").classList.add("flex");
-}
-
-function closeModal() {
-  document.getElementById("modal").classList.add("hidden");
-  document.getElementById("modal").classList.remove("flex");
-  editId = null;
-}
-
-function validateModal() {
-  const ok = document.getElementById("fCliente").value.trim() &&
-             document.getElementById("fProduto").value.trim();
-  document.getElementById("btnSalvar").disabled = !ok;
-}
-
-function salvar() {
-  const cliente   = document.getElementById("fCliente").value.trim();
-  const telefone  = document.getElementById("fTelefone").value.trim();
-  const produto   = document.getElementById("fProduto").value.trim();
-  const vendedora = document.getElementById("fVendedora").value;
-  const status    = document.getElementById("fStatus").value;
-  if (!cliente || !produto) return;
-  const now = new Date().toISOString();
-  if (editId) {
-    const it = itens.find(x=>x.id===editId);
-    if (it) Object.assign(it, {cliente,telefone,produto,vendedora,status,atualizadoEm:now});
-  } else {
-    itens.push({id:Date.now(), cliente, telefone, produto, vendedora, status,
-                criadoEm:now, atualizadoEm:now});
-  }
-  save(); closeModal(); renderAll();
+  itens=itens.filter(x=>x.id!==id); save(); renderAll(); refreshDrill();
 }
 
 /* ── GERENCIAL ── */
@@ -539,101 +566,275 @@ function renderGerencial() {
   const res  = itens.filter(x=>x.status==="aguardando_resposta");
   const est  = itens.filter(x=>x.status==="aguardando_estoque");
   const alts = itens.filter(isAlert);
-
   document.getElementById("kpiResposta").textContent = res.length;
   document.getElementById("kpiEstoque").textContent  = est.length;
   document.getElementById("kpiAlertas").textContent  = alts.length;
 
   // Bar chart
-  const max = Math.max(...VENDEDORAS.map(v=>itens.filter(x=>x.vendedora===v).length), 1);
+  const max = Math.max(...VENDEDORAS.map(v=>itens.filter(x=>x.vendedora===v).length),1);
   document.getElementById("gerChart").innerHTML = VENDEDORAS.map(v => {
-    const nRes = res.filter(x=>x.vendedora===v).length;
-    const nEst = est.filter(x=>x.vendedora===v).length;
-    const total = nRes+nEst;
-    const pct   = Math.round(total/max*100);
-    const al    = itens.filter(x=>x.vendedora===v && isAlert(x)).length;
+    const nR=res.filter(x=>x.vendedora===v).length;
+    const nE=est.filter(x=>x.vendedora===v).length;
+    const total=nR+nE;
+    const al=itens.filter(x=>x.vendedora===v&&isAlert(x)).length;
     return `
-    <div class="flex items-center gap-3 mb-3">
+    <div onclick="drillOpen('vend','${v}')"
+         class="flex items-center gap-3 mb-2 cursor-pointer group hover:bg-slate-50 rounded-xl p-2 -mx-2 transition-colors">
       <div class="w-28 text-sm font-semibold text-gray-700 shrink-0 truncate">${v}</div>
       <div class="flex-1 bg-gray-100 rounded-full h-7 overflow-hidden flex">
-        <div style="width:${Math.round(nRes/max*100)}%;background:#f59e0b;" class="h-full transition-all duration-500" title="Resposta: ${nRes}"></div>
-        <div style="width:${Math.round(nEst/max*100)}%;background:#3b82f6;" class="h-full transition-all duration-500" title="Estoque: ${nEst}"></div>
+        <div style="width:${Math.round(nR/max*100)}%;background:#f59e0b;" class="h-full" title="Resposta: ${nR}"></div>
+        <div style="width:${Math.round(nE/max*100)}%;background:#3b82f6;" class="h-full" title="Estoque: ${nE}"></div>
       </div>
       <div class="text-sm font-black text-gray-800 w-5 text-right shrink-0">${total}</div>
       ${al>0?`<span class="bg-red-100 text-red-600 text-[11px] font-bold px-2 py-0.5 rounded-full border border-red-200 shrink-0">${al}⚠</span>`:""}
+      <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300 group-hover:text-blue-500 shrink-0 transition-colors"></i>
     </div>`;
   }).join("");
 
-  // Alerts
-  document.getElementById("gerAlerts").innerHTML = !alts.length
-    ? `<div class="text-center py-8 text-gray-400 font-semibold">Nenhum alerta no momento ✓</div>`
-    : alts.map(it => {
-      const h  = Math.floor(hours(it.atualizadoEm));
-      const cfg = STATUS_CFG[it.status];
-      return `
-      <div class="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl mb-2 gap-3">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="font-bold text-gray-900">${esc(it.cliente)}</span>
-            <span class="text-xs text-red-500 font-semibold">${h}h sem movimentação</span>
-          </div>
-          <div class="text-xs text-gray-500 mt-0.5 truncate">${cfg.emoji} ${cfg.label}${it.vendedora?" · "+esc(it.vendedora):""}</div>
-          ${it.produto?`<div class="text-xs text-gray-400 italic mt-0.5 truncate">${esc(it.produto)}</div>`:""}
-        </div>
-        <button onclick="openModal(null,${it.id})" style="background:#0d2d6b;"
-                class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:opacity-90 shrink-0">
-          Editar
-        </button>
-      </div>`;
-    }).join("");
+  // Legend
+  document.getElementById("gerChart").innerHTML += `
+  <div class="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style="background:#f59e0b;"></span>Aguardando Resposta</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style="background:#3b82f6;"></span>Aguardando Estoque</span>
+  </div>`;
 
+  // Matrix
+  document.getElementById("gerMatrix").innerHTML = `
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100">
+          <th class="text-left text-xs text-gray-400 font-semibold uppercase tracking-wide pb-3 pr-4">Vendedora</th>
+          <th class="text-center text-xs font-semibold pb-3 px-4" style="color:#f59e0b;">🟡 Resposta</th>
+          <th class="text-center text-xs font-semibold pb-3 px-4" style="color:#3b82f6;">🔵 Estoque</th>
+          <th class="text-center text-xs text-gray-400 font-semibold uppercase tracking-wide pb-3 pl-4">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${VENDEDORAS.map(v => {
+          const nR=res.filter(x=>x.vendedora===v).length;
+          const nE=est.filter(x=>x.vendedora===v).length;
+          const tot=nR+nE;
+          return `<tr class="border-b border-gray-50 hover:bg-slate-50 cursor-pointer transition-colors"
+                      onclick="drillOpen('vend','${v}')">
+            <td class="py-3 pr-4 font-semibold text-gray-700">${v}</td>
+            <td class="py-3 px-4 text-center">
+              ${nR>0?`<span onclick="event.stopPropagation();drillOpen('vendstatus','${v}|aguardando_resposta')"
+                class="inline-block px-3 py-1 rounded-full font-black text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                style="background:#fef3c7;color:#b45309;">${nR}</span>`:`<span class="text-gray-300">—</span>`}
+            </td>
+            <td class="py-3 px-4 text-center">
+              ${nE>0?`<span onclick="event.stopPropagation();drillOpen('vendstatus','${v}|aguardando_estoque')"
+                class="inline-block px-3 py-1 rounded-full font-black text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                style="background:#dbeafe;color:#1d4ed8;">${nE}</span>`:`<span class="text-gray-300">—</span>`}
+            </td>
+            <td class="py-3 pl-4 text-center font-black text-gray-800">${tot>0?tot:`<span class="text-gray-300">0</span>`}</td>
+          </tr>`;
+        }).join("")}
+        <tr class="bg-slate-50">
+          <td class="py-3 pr-4 font-black text-gray-800 text-xs uppercase tracking-wide">Total</td>
+          <td class="py-3 px-4 text-center font-black" style="color:#b45309;">${res.length}</td>
+          <td class="py-3 px-4 text-center font-black" style="color:#1d4ed8;">${est.length}</td>
+          <td class="py-3 pl-4 text-center font-black text-gray-800">${itens.length}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
   lucide.createIcons();
 }
 
-/* ── HEADER ALERT + TAB BADGES ── */
+/* ── DRILL-DOWN PANEL ── */
+let currentDrillType  = null;
+let currentDrillParam = null;
+
+function drillOpen(type, param) {
+  currentDrillType  = type;
+  currentDrillParam = param;
+  renderDrill(type, param);
+  document.getElementById("drillPanel").classList.replace("closed","open");
+  document.getElementById("drillOverlay").classList.replace("closed","open");
+}
+function drillClose() {
+  document.getElementById("drillPanel").classList.replace("open","closed");
+  document.getElementById("drillOverlay").classList.replace("open","closed");
+  currentDrillType = currentDrillParam = null;
+}
+function refreshDrill() {
+  if (currentDrillType) renderDrill(currentDrillType, currentDrillParam);
+}
+
+function renderDrill(type, param) {
+  let lista=[], title="", sub="", headerColor="#0d2d6b";
+  if (type==="status") {
+    const cfg=STATUS_CFG[param];
+    lista=itens.filter(x=>x.status===param).sort((a,b)=>new Date(b.criadoEm)-new Date(a.criadoEm));
+    title=`${cfg.emoji} ${cfg.label}`;
+    sub=`${lista.length} registro${lista.length!==1?"s":""}`;
+    headerColor=param==="aguardando_estoque"?"#1d4ed8":"#92400e";
+  } else if (type==="vend") {
+    lista=itens.filter(x=>x.vendedora===param).sort((a,b)=>new Date(b.criadoEm)-new Date(a.criadoEm));
+    title=`👤 ${param}`;
+    sub=`${lista.length} registro${lista.length!==1?"s":" em aberto"}`;
+  } else if (type==="vendstatus") {
+    const [vend,st]=param.split("|");
+    const cfg=STATUS_CFG[st];
+    lista=itens.filter(x=>x.vendedora===vend&&x.status===st).sort((a,b)=>new Date(b.criadoEm)-new Date(a.criadoEm));
+    title=`${cfg.emoji} ${vend}`;
+    sub=`${cfg.label} · ${lista.length} registro${lista.length!==1?"s":""}`;
+    headerColor=st==="aguardando_estoque"?"#1d4ed8":"#92400e";
+  } else if (type==="alerta") {
+    lista=itens.filter(isAlert).sort((a,b)=>hours(b.atualizadoEm)-hours(a.atualizadoEm));
+    title="⚠️ Alertas +24h";
+    sub=`${lista.length} sem movimentação`;
+    headerColor="#b91c1c";
+  }
+
+  document.getElementById("drillTitle").textContent=title;
+  document.getElementById("drillSub").textContent=sub;
+  document.getElementById("drillHeader").style.background=headerColor;
+
+  if (!lista.length) {
+    document.getElementById("drillBody").innerHTML=`
+    <div class="text-center py-16 text-gray-400">
+      <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-25"></i>
+      <div class="font-semibold">Nenhum registro</div>
+    </div>`;
+    lucide.createIcons(); return;
+  }
+  document.getElementById("drillBody").innerHTML=lista.map(it=>drillCard(it)).join("");
+  lucide.createIcons();
+}
+
+function drillCard(it) {
+  const cfg  = STATUS_CFG[it.status];
+  const al   = isAlert(it);
+  const borda= al?"#ef4444":cfg.cor;
+  const h    = Math.floor(hours(it.atualizadoEm));
+  const bAl  = al?`<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold"
+    style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;">${h}h</span>`:"";
+
+  return `
+  <div class="bg-white rounded-xl border border-slate-100 shadow-sm mb-2 overflow-hidden"
+       style="border-left:4px solid ${borda};">
+    <div class="p-3 flex items-start gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-1 mb-0.5">
+          <span class="font-bold text-gray-900 text-sm">${esc(it.cliente)}</span>${bAl}
+        </div>
+        <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+          ${it.telefone?`<span>${esc(it.telefone)}</span>`:""}
+          ${it.vendedora?`<span class="text-gray-600 font-semibold">${esc(it.vendedora)}</span>`:""}
+          <span class="text-gray-400">${fmt(it.criadoEm)}</span>
+        </div>
+        ${it.produto?`<div class="text-xs text-gray-400 italic mt-1">${esc(it.produto)}</div>`:""}
+        <!-- status badge -->
+        <div class="mt-2">
+          <span class="text-[11px] px-2 py-0.5 rounded-full font-semibold"
+                style="background:rgba(128,128,128,.1);border:1px solid rgba(128,128,128,.2);color:#555;">
+            ${cfg.emoji} ${cfg.label}
+          </span>
+        </div>
+        <!-- actions -->
+        <div class="flex flex-wrap gap-2 mt-2">
+          ${it.status==="aguardando_resposta"?`
+          <button onclick="removeItem(${it.id})"
+                  class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
+                         text-[11px] font-semibold px-2.5 py-1 rounded-lg">
+            <i data-lucide="check" class="w-3 h-3"></i> Respondeu
+          </button>
+          <button onclick="moverEstoque(${it.id})"
+                  class="flex items-center gap-1 border text-blue-600 hover:bg-blue-50
+                         text-[11px] font-semibold px-2.5 py-1 rounded-lg" style="border-color:#3b82f6;">
+            <i data-lucide="arrow-right" class="w-3 h-3"></i> Mover p/ Estoque
+          </button>`:`
+          <button onclick="removeItem(${it.id})"
+                  class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
+                         text-[11px] font-semibold px-2.5 py-1 rounded-lg">
+            <i data-lucide="check" class="w-3 h-3"></i> Produto chegou
+          </button>`}
+        </div>
+      </div>
+      <div class="flex flex-col gap-2 shrink-0">
+        <button onclick="openEditModal(${it.id})" class="text-gray-300 hover:text-blue-600 transition-colors">
+          <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+        </button>
+        <button onclick="deleteItem(${it.id})" class="text-gray-300 hover:text-red-500 transition-colors">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── EDIT MODAL ── */
+function openEditModal(id) {
+  const it=itens.find(x=>x.id===id); if (!it) return;
+  editId=id;
+  document.getElementById("eCliente").value   = it.cliente;
+  document.getElementById("eTelefone").value  = it.telefone||"";
+  document.getElementById("eProduto").value   = it.produto||"";
+  document.getElementById("eVendedora").value = it.vendedora||"";
+  document.getElementById("eStatus").value    = it.status;
+  validateEditForm();
+  document.getElementById("editModal").classList.remove("hidden");
+  document.getElementById("editModal").classList.add("flex");
+}
+function closeEditModal() {
+  document.getElementById("editModal").classList.add("hidden");
+  document.getElementById("editModal").classList.remove("flex");
+  editId=null;
+}
+function validateEditForm() {
+  const ok=document.getElementById("eCliente").value.trim()&&document.getElementById("eProduto").value.trim();
+  document.getElementById("btnSalvarEdit").disabled=!ok;
+}
+function salvarEdicao() {
+  const it=itens.find(x=>x.id===editId); if (!it) return;
+  it.cliente   = document.getElementById("eCliente").value.trim();
+  it.telefone  = document.getElementById("eTelefone").value.trim();
+  it.produto   = document.getElementById("eProduto").value.trim();
+  it.vendedora = document.getElementById("eVendedora").value;
+  it.status    = document.getElementById("eStatus").value;
+  it.atualizadoEm = new Date().toISOString();
+  save(); closeEditModal(); renderAll(); refreshDrill();
+}
+document.getElementById("editModal").addEventListener("click",e=>{
+  if(e.target===document.getElementById("editModal")) closeEditModal();
+});
+
+/* ── BADGES ── */
 function updateBadges() {
-  const alts = itens.filter(isAlert).length;
-  const el   = document.getElementById("headerAlertBadge");
-  document.getElementById("headerAlertCount").textContent = alts;
-  if (alts>0) { el.classList.remove("hidden"); el.classList.add("flex"); }
-  else        { el.classList.add("hidden");    el.classList.remove("flex"); }
-
-  const nRes = itens.filter(x=>x.status==="aguardando_resposta").length;
-  const nEst = itens.filter(x=>x.status==="aguardando_estoque").length;
-
-  const bR = document.getElementById("badgeResposta");
-  const bE = document.getElementById("badgeEstoque");
-
-  if (nRes>0) { bR.textContent=nRes; bR.classList.remove("hidden"); }
-  else        { bR.classList.add("hidden"); }
-  if (nEst>0) { bE.textContent=nEst; bE.classList.remove("hidden"); }
-  else        { bE.classList.add("hidden"); }
+  const alts=itens.filter(isAlert).length;
+  const el=document.getElementById("headerAlertBadge");
+  document.getElementById("headerAlertCount").textContent=alts;
+  if(alts>0){el.classList.remove("hidden");el.classList.add("flex");}
+  else{el.classList.add("hidden");el.classList.remove("flex");}
+  const nR=itens.filter(x=>x.status==="aguardando_resposta").length;
+  const nE=itens.filter(x=>x.status==="aguardando_estoque").length;
+  const bR=document.getElementById("badgeResposta");
+  const bE=document.getElementById("badgeEstoque");
+  if(nR>0){bR.textContent=nR;bR.classList.remove("hidden");}else{bR.classList.add("hidden");}
+  if(nE>0){bE.textContent=nE;bE.classList.remove("hidden");}else{bE.classList.add("hidden");}
 }
 
 /* ── POPULATE SELECTS ── */
 function populateSelects() {
-  const opts = VENDEDORAS.map(v=>`<option value="${v}">${v}</option>`).join("");
-  document.getElementById("fVendedora").innerHTML = `<option value="">Selecione...</option>${opts}`;
+  const opts=VENDEDORAS.map(v=>`<option value="${v}">${v}</option>`).join("");
+  document.getElementById("fVendedora").innerHTML=`<option value="">Selecione...</option>${opts}`;
+  document.getElementById("eVendedora").innerHTML=`<option value="">Selecione...</option>${opts}`;
 }
 
 /* ── RENDER ALL ── */
 function renderAll() {
-  renderChips("resposta");
-  renderChips("estoque");
-  renderLista("resposta");
-  renderLista("estoque");
+  renderChips("resposta"); renderChips("estoque");
+  renderLista("resposta"); renderLista("estoque");
   updateBadges();
-  if (!document.getElementById("tabGerencial").classList.contains("hidden")) renderGerencial();
+  if(!document.getElementById("tabGerencial").classList.contains("hidden")) renderGerencial();
 }
 
-/* ── CLOSE MODAL ON OVERLAY ── */
-document.getElementById("modal").addEventListener("click", e => {
-  if (e.target===document.getElementById("modal")) closeModal();
-});
-
 /* ── INIT ── */
-document.addEventListener("DOMContentLoaded", () => {
-  load(); populateSelects(); renderAll();
+document.addEventListener("DOMContentLoaded", ()=>{
+  load(); populateSelects(); switchTab("gerencial"); renderAll();
 });
 </script>
 </body>
