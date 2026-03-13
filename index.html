@@ -8,27 +8,27 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <style>
   body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-  .tab-active  { border-bottom: 3px solid #facc15; color: #facc15; font-weight: 700; }
+  .tab-active   { border-bottom: 3px solid #facc15; color: #facc15; font-weight: 700; }
   .tab-inactive { color: rgba(255,255,255,0.65); border-bottom: 3px solid transparent; }
-  .chip-active   { background: #0d2d6b !important; color: white !important; border-color: #0d2d6b !important; }
-  .chip-inactive { background: #f1f5f9; color: #374151; border-color: #e2e8f0; }
-  .order-card { transition: box-shadow .2s; }
-  .order-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .item-card { transition: box-shadow .2s; }
+  .item-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.13); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
   .pulse-red { animation: blink 1.8s infinite; }
   .modal-overlay { background: rgba(0,0,0,0.52); }
+  .chip-active  { background: #0d2d6b !important; color: #fff !important; border-color: #0d2d6b !important; }
+  .chip-inactive{ background: #f1f5f9; color: #374151; border-color: #e2e8f0; }
 </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
 
-<!-- ======================== HEADER ======================== -->
-<header style="background: linear-gradient(135deg,#0d2d6b 0%,#1a4a9f 100%);" class="shadow-xl">
-  <div class="max-w-7xl mx-auto px-4 pt-3 pb-0 flex items-center justify-between">
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<header style="background:linear-gradient(135deg,#0d2d6b 0%,#1a4a9f 100%);" class="shadow-xl">
+  <div class="max-w-6xl mx-auto px-4 pt-3 pb-0 flex items-center justify-between">
 
     <!-- Logo -->
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-           style="background:#0a2259; border:2px solid rgba(255,255,255,.25);">
+           style="background:#0a2259;border:2px solid rgba(255,255,255,.25);">
         <span class="text-white font-black text-xl select-none">C</span>
       </div>
       <div class="leading-tight">
@@ -40,96 +40,120 @@
 
     <!-- Alert badge -->
     <div id="headerAlertBadge"
-         class="hidden items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full pulse-red text-sm font-bold cursor-default select-none">
+         class="hidden items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full pulse-red text-sm font-bold select-none">
       <span id="headerAlertCount">0</span>
       <span class="text-xs font-semibold">alerta(s) +24h</span>
     </div>
   </div>
 
   <!-- Tabs -->
-  <div class="max-w-7xl mx-auto px-4 flex gap-0 mt-2">
-    <button onclick="switchTab('pedidos')" id="tab-pedidos"
+  <div class="max-w-6xl mx-auto px-4 flex mt-2">
+    <button onclick="switchTab('resposta')" id="tab-resposta"
             class="tab-active px-6 py-3 text-sm transition-all">
-      Pedidos Ativos
+      🟡 Aguardando Resposta
+      <span id="badgeResposta" class="hidden ml-1.5 bg-yellow-400 text-gray-900 text-xs font-black px-2 py-0.5 rounded-full"></span>
     </button>
     <button onclick="switchTab('estoque')" id="tab-estoque"
             class="tab-inactive px-6 py-3 text-sm transition-all">
-      Aguardando Estoque
-      <span id="stockTabBadge" class="hidden ml-1.5 bg-yellow-400 text-gray-900 text-xs font-bold px-2 py-0.5 rounded-full"></span>
+      🔵 Aguardando Estoque
+      <span id="badgeEstoque" class="hidden ml-1.5 bg-blue-400 text-white text-xs font-black px-2 py-0.5 rounded-full"></span>
     </button>
     <button onclick="switchTab('gerencial')" id="tab-gerencial"
             class="tab-inactive px-6 py-3 text-sm transition-all">
-      Gerencial
+      📊 Gerencial
     </button>
   </div>
 </header>
 
-<!-- ======================== MAIN ======================== -->
-<main class="max-w-7xl mx-auto px-4 py-6">
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<main class="max-w-6xl mx-auto px-4 py-6">
 
-  <!-- ===== TAB 1: PEDIDOS ATIVOS ===== -->
-  <div id="tabPedidos">
-
-    <!-- KPI Bar -->
-    <div id="kpiBar" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-5"></div>
-
-    <!-- Filter Bar -->
-    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-4 mb-5">
-      <div class="flex flex-wrap gap-3 items-center">
-        <div class="relative flex-1 min-w-[180px]">
-          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"></i>
-          <input id="searchInput" type="text" placeholder="Buscar cliente ou empresa..."
-                 class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm
-                        focus:outline-none focus:ring-2 focus:ring-blue-200"
-                 oninput="renderPedidos()">
-        </div>
-        <button onclick="openModalPedido()"
-                style="background:#0d2d6b;"
-                class="text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90
-                       flex items-center gap-1.5 whitespace-nowrap shrink-0">
-          <i data-lucide="plus" class="w-4 h-4"></i> Novo Pedido
-        </button>
+  <!-- ──────── TAB: AGUARDANDO RESPOSTA ──────── -->
+  <div id="tabResposta">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div>
+        <h2 class="text-xl font-black text-gray-800">🟡 Aguardando Resposta</h2>
+        <p class="text-sm text-gray-500 mt-0.5">Clientes que ainda não retornaram</p>
       </div>
-
-      <!-- Vendedora chips -->
-      <div class="mt-3">
-        <div class="text-[11px] text-gray-400 font-semibold uppercase tracking-widest mb-1.5">Vendedora</div>
-        <div id="vendedoraChips" class="flex flex-wrap gap-2"></div>
-      </div>
-
-      <!-- Status chips -->
-      <div class="mt-3">
-        <div class="text-[11px] text-gray-400 font-semibold uppercase tracking-widest mb-1.5">Status</div>
-        <div id="statusChips" class="flex flex-wrap gap-2"></div>
-      </div>
-    </div>
-
-    <!-- Order List -->
-    <div id="orderList"></div>
-  </div>
-
-  <!-- ===== TAB 2: AGUARDANDO ESTOQUE ===== -->
-  <div id="tabEstoque" class="hidden">
-    <div class="flex items-center justify-between mb-5">
-      <h2 class="text-xl font-black text-gray-800">Aguardando Estoque</h2>
-      <button onclick="openModalEstoque()"
+      <button onclick="openModal('aguardando_resposta')"
               style="background:#0d2d6b;"
-              class="text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 flex items-center gap-1.5">
+              class="text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 flex items-center gap-1.5 shrink-0">
         <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
       </button>
     </div>
-    <div id="stockList"></div>
+    <!-- Filters -->
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm px-4 pt-3 pb-4 mb-4">
+      <div class="flex flex-wrap gap-3 items-center">
+        <div class="relative flex-1 min-w-[180px]">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"></i>
+          <input id="searchResposta" type="text" placeholder="Buscar cliente ou produto..."
+                 class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm
+                        focus:outline-none focus:ring-2 focus:ring-yellow-200"
+                 oninput="renderLista('resposta')">
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="text-[11px] text-gray-400 font-semibold uppercase tracking-widest mb-1.5">Vendedora</div>
+        <div id="chipsResposta" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+    <div id="listaResposta"></div>
   </div>
 
-  <!-- ===== TAB 3: GERENCIAL ===== -->
+  <!-- ──────── TAB: AGUARDANDO ESTOQUE ──────── -->
+  <div id="tabEstoque" class="hidden">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div>
+        <h2 class="text-xl font-black text-gray-800">🔵 Aguardando Estoque</h2>
+        <p class="text-sm text-gray-500 mt-0.5">Produtos aguardando chegada no estoque</p>
+      </div>
+      <button onclick="openModal('aguardando_estoque')"
+              style="background:#0d2d6b;"
+              class="text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 flex items-center gap-1.5 shrink-0">
+        <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
+      </button>
+    </div>
+    <!-- Filters -->
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm px-4 pt-3 pb-4 mb-4">
+      <div class="flex flex-wrap gap-3 items-center">
+        <div class="relative flex-1 min-w-[180px]">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"></i>
+          <input id="searchEstoque" type="text" placeholder="Buscar cliente ou produto..."
+                 class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm
+                        focus:outline-none focus:ring-2 focus:ring-blue-200"
+                 oninput="renderLista('estoque')">
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="text-[11px] text-gray-400 font-semibold uppercase tracking-widest mb-1.5">Vendedora</div>
+        <div id="chipsEstoque" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+    <div id="listaEstoque"></div>
+  </div>
+
+  <!-- ──────── TAB: GERENCIAL ──────── -->
   <div id="tabGerencial" class="hidden">
-    <!-- KPIs gerenciais -->
-    <div id="gerencialKpis" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5"></div>
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
+      <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6" style="border-top:4px solid #f59e0b;">
+        <div id="kpiResposta" class="text-4xl font-black text-yellow-500">0</div>
+        <div class="text-sm text-gray-500 mt-1 font-semibold">🟡 Aguardando Resposta</div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6" style="border-top:4px solid #3b82f6;">
+        <div id="kpiEstoque" class="text-4xl font-black text-blue-500">0</div>
+        <div class="text-sm text-gray-500 mt-1 font-semibold">🔵 Aguardando Estoque</div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6 col-span-2 lg:col-span-1" style="border-top:4px solid #ef4444;">
+        <div id="kpiAlertas" class="text-4xl font-black text-red-500">0</div>
+        <div class="text-sm text-gray-500 mt-1 font-semibold">⚠️ Alertas +24h sem mov.</div>
+      </div>
+    </div>
 
     <!-- Bar chart -->
     <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-5">
-      <h3 class="text-base font-black text-gray-800 mb-4">Pedidos Ativos por Vendedora</h3>
-      <div id="vendedoraChart"></div>
+      <h3 class="text-base font-black text-gray-800 mb-4">Itens em Aberto por Vendedora</h3>
+      <div id="gerChart"></div>
     </div>
 
     <!-- Alerts -->
@@ -138,662 +162,476 @@
         <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i>
         Alertas — +24h sem movimentação
       </h3>
-      <div id="gerencialAlertList"></div>
-    </div>
-
-    <!-- Premium -->
-    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-      <h3 class="text-base font-black text-gray-800 mb-4 flex items-center gap-2">
-        <span>⭐</span> Pedidos Premium Ativos
-      </h3>
-      <div id="gerencialPremiumList"></div>
+      <div id="gerAlerts"></div>
     </div>
   </div>
 
 </main>
 
-<!-- ======================== MODAL: PEDIDO ======================== -->
-<div id="modalPedido" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay p-4">
-  <div class="bg-white rounded-2xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl">
+<!-- ═══════════════════════ MODAL ═══════════════════════ -->
+<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl">
     <!-- header -->
-    <div style="background:#0d2d6b;" class="text-white px-6 py-4 rounded-t-2xl flex items-center justify-between shrink-0">
-      <h3 id="modalPedidoTitle" class="font-bold text-lg">Novo Pedido</h3>
-      <button onclick="closeModalPedido()" class="hover:text-blue-200 transition-colors">
+    <div id="modalHeader" style="background:#0d2d6b;"
+         class="text-white px-6 py-4 rounded-t-2xl flex items-center justify-between shrink-0">
+      <h3 id="modalTitle" class="font-bold text-lg">Adicionar</h3>
+      <button onclick="closeModal()" class="hover:text-blue-200 transition-colors">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
     <!-- body -->
-    <div class="overflow-y-auto p-6 flex-1">
-      <div class="space-y-4">
+    <div class="overflow-y-auto p-6 flex-1 space-y-4">
 
-        <!-- Tipo + Premium -->
-        <div class="flex gap-4 flex-wrap">
-          <div class="flex-1 min-w-[140px]">
-            <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Tipo</label>
-            <select id="fpTipo" onchange="toggleEmpresaField()"
-                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-              <option value="PF">PF — Pessoa Física</option>
-              <option value="PJ">PJ — Pessoa Jurídica</option>
-            </select>
-          </div>
-          <div id="premiumWrap" class="hidden flex items-end pb-2">
-            <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" id="fpPremium" class="w-4 h-4 rounded accent-yellow-400">
-              <span class="text-sm font-semibold text-gray-700">⭐ PJ Premium</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Cliente -->
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Nome do Cliente *</label>
-          <input id="fpCliente" type="text" placeholder="Nome completo"
-                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                 oninput="validatePedidoForm()">
-        </div>
-
-        <!-- Empresa (só PJ) -->
-        <div id="empresaWrap" class="hidden">
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Empresa</label>
-          <input id="fpEmpresa" type="text" placeholder="Razão social ou nome fantasia"
-                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-        </div>
-
-        <!-- Telefone -->
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Telefone WhatsApp</label>
-          <input id="fpTelefone" type="text" placeholder="(43) 99999-9999"
-                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-        </div>
-
-        <!-- Vendedora -->
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendedora *</label>
-          <select id="fpVendedora" onchange="validatePedidoForm()"
-                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-            <option value="">Selecione a vendedora...</option>
-          </select>
-        </div>
-
-        <!-- Valor -->
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Valor R$</label>
-          <input id="fpValor" type="text" placeholder="0,00"
-                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-        </div>
-
-        <!-- Status -->
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Status</label>
-          <select id="fpStatus"
-                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-          </select>
-        </div>
-
-        <!-- Descrição -->
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Descrição do Pedido</label>
-          <textarea id="fpDescricao" rows="3" placeholder="Descreva os produtos e quantidades..."
-                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"></textarea>
-        </div>
+      <!-- Cliente -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Cliente *</label>
+        <input id="fCliente" type="text" placeholder="Nome do cliente"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-blue-200"
+               oninput="validateModal()">
       </div>
+
+      <!-- Telefone -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Telefone WhatsApp</label>
+        <input id="fTelefone" type="text" placeholder="(43) 99999-9999"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-blue-200">
+      </div>
+
+      <!-- Produto / Pedido -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Produto / Pedido *</label>
+        <textarea id="fProduto" rows="3" placeholder="Descreva o produto ou pedido..."
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                         focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+                  oninput="validateModal()"></textarea>
+      </div>
+
+      <!-- Vendedora -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Vendedora</label>
+        <select id="fVendedora"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-blue-200">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+
+      <!-- Status -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Categoria</label>
+        <select id="fStatus"
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-blue-200">
+          <option value="aguardando_resposta">🟡 Aguardando Resposta</option>
+          <option value="aguardando_estoque">🔵 Aguardando Estoque</option>
+        </select>
+      </div>
+
     </div>
     <!-- footer -->
     <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
-      <button onclick="closeModalPedido()"
+      <button onclick="closeModal()"
               class="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
         Cancelar
       </button>
-      <button id="btnSalvarPedido" onclick="salvarPedido()" disabled
+      <button id="btnSalvar" onclick="salvar()" disabled
               style="background:#0d2d6b;"
               class="text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90
                      disabled:opacity-40 disabled:cursor-not-allowed">
-        Criar Pedido
+        Salvar
       </button>
     </div>
   </div>
 </div>
 
-<!-- ======================== MODAL: ESTOQUE ======================== -->
-<div id="modalEstoque" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay p-4">
-  <div class="bg-white rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl">
-    <div style="background:#0d2d6b;" class="text-white px-6 py-4 rounded-t-2xl flex items-center justify-between shrink-0">
-      <h3 class="font-bold text-lg">Adicionar — Aguardando Estoque</h3>
-      <button onclick="closeModalEstoque()" class="hover:text-blue-200 transition-colors">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-    </div>
-    <div class="overflow-y-auto p-6 flex-1">
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Cliente *</label>
-          <input id="feCliente" type="text" placeholder="Nome do cliente"
-                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                 oninput="validateEstoqueForm()">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Telefone</label>
-          <input id="feTelefone" type="text" placeholder="(43) 99999-9999"
-                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Produto Desejado *</label>
-          <input id="feProduto" type="text" placeholder="Ex: Toner HP 85A"
-                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                 oninput="validateEstoqueForm()">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vendedora</label>
-          <select id="feVendedora"
-                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-            <option value="">Selecione...</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
-      <button onclick="closeModalEstoque()"
-              class="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-        Cancelar
-      </button>
-      <button id="btnSalvarEstoque" onclick="salvarEstoque()" disabled
-              style="background:#0d2d6b;"
-              class="text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90
-                     disabled:opacity-40 disabled:cursor-not-allowed">
-        Adicionar
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ======================== SCRIPT ======================== -->
+<!-- ═══════════════════════ SCRIPT ═══════════════════════ -->
 <script>
-/* ─────────────── CONSTANTS ─────────────── */
+/* ── CONSTANTS ── */
 const VENDEDORAS = ["Veridiane","Maria Luiza","Mislaine","Simone","Erika"];
 
-const STATUS = {
-  atendimento:            { label:"Em Atendimento",       cor:"#6b7280" },
-  aguardando_resposta:    { label:"Aguardando Resposta",  cor:"#f59e0b" },
-  aguardando_estoque:     { label:"Aguardando Estoque",   cor:"#3b82f6" },
-  aguardando_confirmacao: { label:"Aguard. Confirmação",  cor:"#f97316" },
-  confirmado:             { label:"Pedido Confirmado",    cor:"#22c55e" },
-  entrega_pendente:       { label:"Entrega Pendente",     cor:"#2563eb" },
-  finalizado:             { label:"Finalizado",           cor:"#16a34a" },
+const STATUS_CFG = {
+  aguardando_resposta: { label:"Aguardando Resposta", cor:"#f59e0b", emoji:"🟡" },
+  aguardando_estoque:  { label:"Aguardando Estoque",  cor:"#3b82f6", emoji:"🔵" },
 };
 
-const KPI_KEYS = ["atendimento","aguardando_resposta","aguardando_estoque",
-                  "aguardando_confirmacao","confirmado","entrega_pendente"];
+/* ── STATE ── */
+let itens  = [];           // todos os registros
+let editId = null;
 
-/* ─────────────── STATE ─────────────── */
-let pedidos  = [];
-let estoque  = [];
-let editId   = null;
-let fVend    = "Todas";
-let fStat    = "Todos";
-
-/* ─────────────── PERSISTENCE ─────────────── */
-const save = () => {
-  localStorage.setItem("ped_computec", JSON.stringify(pedidos));
-  localStorage.setItem("est_computec", JSON.stringify(estoque));
+// filter state per tab
+const filters = {
+  resposta: { vend:"Todas", search:"" },
+  estoque:  { vend:"Todas", search:"" },
 };
 
-const load = () => {
-  try { pedidos = JSON.parse(localStorage.getItem("ped_computec")) || []; } catch(e){ pedidos=[]; }
-  try { estoque = JSON.parse(localStorage.getItem("est_computec")) || []; } catch(e){ estoque=[]; }
-};
+/* ── PERSISTENCE ── */
+function save() { localStorage.setItem("ped_computec_v2", JSON.stringify(itens)); }
+function load() {
+  try { itens = JSON.parse(localStorage.getItem("ped_computec_v2")) || []; }
+  catch(e) { itens = []; }
 
-/* ─────────────── UTILS ─────────────── */
-const fmt = iso => iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
-const hours = iso => iso ? (Date.now() - new Date(iso))/3600000 : 0;
-const isAlert = p => !["finalizado","confirmado"].includes(p.status) && hours(p.atualizadoEm) >= 24;
-const rgb = hex => { const n=parseInt(hex.slice(1),16); return `${(n>>16)&255},${(n>>8)&255},${n&255}`; };
+  // Migrar dados antigos se existirem
+  const migResposta = localStorage.getItem("ped_computec");
+  const migEstoque  = localStorage.getItem("est_computec");
+  if (!itens.length && (migResposta || migEstoque)) {
+    try {
+      const p = JSON.parse(migResposta)||[];
+      const e = JSON.parse(migEstoque)||[];
+      p.forEach(x => itens.push({
+        id: x.id||Date.now()+Math.random(),
+        cliente: x.cliente||"", telefone: x.telefone||"",
+        produto: x.descricao||"", vendedora: x.vendedora||"",
+        status: (x.status==="aguardando_estoque") ? "aguardando_estoque" : "aguardando_resposta",
+        criadoEm: x.criadoEm||new Date().toISOString(),
+        atualizadoEm: x.atualizadoEm||new Date().toISOString(),
+      }));
+      e.forEach(x => itens.push({
+        id: x.id||Date.now()+Math.random(),
+        cliente: x.cliente||"", telefone: x.telefone||"",
+        produto: x.produto||"", vendedora: x.vendedora||"",
+        status: "aguardando_estoque",
+        criadoEm: x.criadoEm||new Date().toISOString(),
+        atualizadoEm: x.criadoEm||new Date().toISOString(),
+      }));
+      save();
+    } catch(e) {}
+  }
+}
 
-/* ─────────────── TABS ─────────────── */
+/* ── UTILS ── */
+const fmt   = iso => iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
+const hours = iso => iso ? (Date.now()-new Date(iso))/3600000 : 0;
+const isAlert = it => hours(it.atualizadoEm) >= 24;
+const esc   = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+/* ── TABS ── */
 function switchTab(t) {
-  ["pedidos","estoque","gerencial"].forEach(x => {
+  ["resposta","estoque","gerencial"].forEach(x => {
     const cap = x[0].toUpperCase()+x.slice(1);
     document.getElementById("tab"+cap).classList.add("hidden");
-    document.getElementById("tab-"+x).className =
-      "tab-inactive px-6 py-3 text-sm transition-all";
+    document.getElementById("tab-"+x).className = "tab-inactive px-6 py-3 text-sm transition-all";
   });
   const cap = t[0].toUpperCase()+t.slice(1);
   document.getElementById("tab"+cap).classList.remove("hidden");
-  document.getElementById("tab-"+t).className =
-    "tab-active px-6 py-3 text-sm transition-all";
+  document.getElementById("tab-"+t).className = "tab-active px-6 py-3 text-sm transition-all";
   if (t === "gerencial") renderGerencial();
 }
 
-/* ─────────────── KPI BAR ─────────────── */
-function renderKpiBar() {
-  document.getElementById("kpiBar").innerHTML = KPI_KEYS.map(k => {
-    const cfg = STATUS[k];
-    const n = pedidos.filter(p => p.status===k).length;
-    return `
-    <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden cursor-pointer
-                hover:shadow-md transition-shadow" onclick="jumpStatus('${k}')">
-      <div style="background:${cfg.cor};height:4px;"></div>
-      <div class="p-4">
-        <div class="text-3xl font-black text-gray-800">${n}</div>
-        <div class="text-[11px] text-gray-500 mt-1 leading-snug">${cfg.label}</div>
-      </div>
-    </div>`;
-  }).join("");
-}
-
-function jumpStatus(k) {
-  fStat = k; renderChips(); renderPedidos();
-  if (document.getElementById("tabPedidos").classList.contains("hidden")) switchTab("pedidos");
-}
-
-/* ─────────────── CHIPS ─────────────── */
-function renderChips() {
-  document.getElementById("vendedoraChips").innerHTML =
+/* ── CHIPS ── */
+function renderChips(tab) {
+  const key = tab==="resposta" ? "Resposta" : "Estoque";
+  const f   = filters[tab];
+  document.getElementById("chips"+key).innerHTML =
     ["Todas",...VENDEDORAS].map(v =>
-      `<button onclick="setFV('${v}')"
-        class="chip px-3 py-1 rounded-full text-xs font-semibold border transition-all
-               ${fVend===v?"chip-active":"chip-inactive hover:border-gray-400"}">${v}</button>`
+      `<button onclick="setVend('${tab}','${v}')"
+        class="px-3 py-1 rounded-full text-xs font-semibold border transition-all
+               ${f.vend===v?"chip-active":"chip-inactive hover:border-gray-400"}">${v}</button>`
     ).join("");
-
-  document.getElementById("statusChips").innerHTML =
-    ["Todos",...Object.keys(STATUS)].map(s => {
-      const label = s==="Todos" ? "Todos" : STATUS[s].label;
-      return `<button onclick="setFS('${s}')"
-        class="chip px-3 py-1 rounded-full text-xs font-semibold border transition-all
-               ${fStat===s?"chip-active":"chip-inactive hover:border-gray-400"}">${label}</button>`;
-    }).join("");
 }
-const setFV = v => { fVend=v; renderChips(); renderPedidos(); };
-const setFS = s => { fStat=s; renderChips(); renderPedidos(); };
 
-/* ─────────────── PEDIDO CARD ─────────────── */
-function cardPedido(p) {
-  const cfg    = STATUS[p.status] || STATUS.atendimento;
-  const alerta = isAlert(p);
-  const borda  = alerta ? "#ef4444" : cfg.cor;
-  const h      = Math.floor(hours(p.atualizadoEm));
+function setVend(tab, v) {
+  filters[tab].vend = v;
+  renderChips(tab);
+  renderLista(tab);
+}
 
-  const bPremium = p.premium
-    ? `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold"
-             style="background:#fef9c3;border:1px solid #fde047;color:#854d0e;">⭐ Premium</span>` : "";
-  const bPJ = (p.tipo==="PJ" && !p.premium)
-    ? `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold"
-             style="background:#dbeafe;border:1px solid #93c5fd;color:#1e40af;">PJ</span>` : "";
-  const bAlert = alerta
-    ? `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold"
+/* ── CARD ── */
+function makeCard(it) {
+  const cfg   = STATUS_CFG[it.status];
+  const al    = isAlert(it);
+  const borda = al ? "#ef4444" : cfg.cor;
+  const h     = Math.floor(hours(it.atualizadoEm));
+
+  const bAlert = al
+    ? `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold ml-1"
              style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;">${h}h sem mov.</span>` : "";
 
-  const opts = Object.entries(STATUS).map(([id,c]) =>
-    `<option value="${id}" ${p.status===id?"selected":""}>${c.label}</option>`).join("");
+  // action button(s) differ per status
+  let actions = "";
+  if (it.status === "aguardando_resposta") {
+    actions = `
+      <div class="flex flex-wrap gap-2 mt-2">
+        <button onclick="removeItem(${it.id},'✓ Respondeu')"
+                class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
+                       text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+          <i data-lucide="check" class="w-3 h-3"></i> Respondeu
+        </button>
+        <button onclick="moverParaEstoque(${it.id})"
+                class="flex items-center gap-1 border text-blue-600 hover:bg-blue-50
+                       text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                style="border-color:#3b82f6;">
+          <i data-lucide="arrow-right" class="w-3 h-3"></i> Mover p/ Estoque
+        </button>
+      </div>`;
+  } else {
+    actions = `
+      <div class="mt-2">
+        <button onclick="removeItem(${it.id},'✓ Produto chegou')"
+                class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
+                       text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+          <i data-lucide="check" class="w-3 h-3"></i> Produto chegou
+        </button>
+      </div>`;
+  }
 
   return `
-  <div class="order-card bg-white rounded-xl border border-slate-100 shadow-sm mb-3 overflow-hidden"
+  <div class="item-card bg-white rounded-xl border border-slate-100 shadow-sm mb-3 overflow-hidden"
        style="border-left:4px solid ${borda};">
     <div class="p-4">
-      <div class="flex items-start gap-4">
-        <!-- left -->
+      <div class="flex items-start gap-3">
         <div class="flex-1 min-w-0">
-          <div class="flex flex-wrap items-center gap-1.5 mb-1">
-            <span class="font-bold text-gray-900">${escHtml(p.cliente)}</span>
-            ${bPremium}${bPJ}${bAlert}
+          <!-- Nome + alert -->
+          <div class="flex flex-wrap items-center gap-1 mb-1">
+            <span class="font-bold text-gray-900">${esc(it.cliente)}</span>${bAlert}
           </div>
-          ${p.empresa ? `<div class="text-sm text-gray-600 mb-0.5"><span class="font-semibold">Empresa:</span> ${escHtml(p.empresa)}</div>` : ""}
-          <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-500">
-            ${p.telefone ? `<span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i>${escHtml(p.telefone)}</span>` : ""}
-            <span class="flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i>${escHtml(p.vendedora)}</span>
-            ${p.valor ? `<span class="font-semibold text-emerald-700">R$ ${escHtml(p.valor)}</span>` : ""}
-            <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i>${fmt(p.criadoEm)}</span>
+          <!-- Info row -->
+          <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-500 mb-1">
+            ${it.telefone?`<span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i>${esc(it.telefone)}</span>`:""}
+            ${it.vendedora?`<span class="flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i>${esc(it.vendedora)}</span>`:""}
+            <span class="flex items-center gap-1 text-gray-400"><i data-lucide="calendar" class="w-3 h-3"></i>${fmt(it.criadoEm)}</span>
           </div>
-          ${p.descricao ? `<div class="text-sm italic text-gray-400 mt-1.5">${escHtml(p.descricao)}</div>` : ""}
+          <!-- Produto -->
+          ${it.produto?`<div class="text-sm text-gray-600 italic mt-1">${esc(it.produto)}</div>`:""}
+          <!-- Actions -->
+          ${actions}
         </div>
-        <!-- right -->
-        <div class="flex flex-col items-end gap-2 shrink-0">
-          <!-- status badge -->
-          <div class="flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold"
-               style="background:rgba(${rgb(cfg.cor)},.1);border:1px solid rgba(${rgb(cfg.cor)},.35);color:${cfg.cor};">
-            <span class="w-2 h-2 rounded-full inline-block" style="background:${cfg.cor};"></span>
-            ${cfg.label}
-          </div>
-          <!-- inline select -->
-          <select id="sel-${p.id}"
-                  class="text-xs border border-gray-200 bg-gray-50 rounded-lg px-2 py-1
-                         focus:outline-none focus:ring-1 focus:ring-blue-200">
-            ${opts}
-          </select>
-          <!-- actions -->
-          <div class="flex gap-2">
-            <button onclick="openModalPedido(${p.id})"
-                    class="text-gray-300 hover:text-blue-600 transition-colors" title="Editar">
-              <i data-lucide="pencil" class="w-4 h-4"></i>
-            </button>
-            <button onclick="deletePedido(${p.id})"
-                    class="text-gray-300 hover:text-red-500 transition-colors" title="Excluir">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-          </div>
+        <!-- Edit/Delete -->
+        <div class="flex flex-col gap-2 shrink-0">
+          <button onclick="openModal(null,${it.id})"
+                  class="text-gray-300 hover:text-blue-600 transition-colors" title="Editar">
+            <i data-lucide="pencil" class="w-4 h-4"></i>
+          </button>
+          <button onclick="deleteItem(${it.id})"
+                  class="text-gray-300 hover:text-red-500 transition-colors" title="Excluir">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
         </div>
       </div>
     </div>
   </div>`;
 }
 
-/* ─────────────── RENDER PEDIDOS ─────────────── */
-function renderPedidos() {
-  const q = document.getElementById("searchInput").value.toLowerCase().trim();
-  let list = pedidos.filter(p => {
-    const ms = !q || p.cliente.toLowerCase().includes(q) || (p.empresa||"").toLowerCase().includes(q);
-    const mv = fVend==="Todas" || p.vendedora===fVend;
-    const mst= fStat==="Todos" || p.status===fStat;
-    return ms && mv && mst;
-  }).sort((a,b) => new Date(b.criadoEm)-new Date(a.criadoEm));
+/* ── RENDER LISTA ── */
+function renderLista(tab) {
+  const status = "aguardando_"+tab;
+  const f      = filters[tab];
+  const q      = (tab==="resposta"
+    ? document.getElementById("searchResposta")
+    : document.getElementById("searchEstoque")).value.toLowerCase().trim();
 
-  const el = document.getElementById("orderList");
-  if (!list.length) {
+  const lista = itens
+    .filter(it => it.status===status)
+    .filter(it => !q || it.cliente.toLowerCase().includes(q) || (it.produto||"").toLowerCase().includes(q))
+    .filter(it => f.vend==="Todas" || it.vendedora===f.vend)
+    .sort((a,b) => new Date(b.criadoEm)-new Date(a.criadoEm));
+
+  const elId = tab==="resposta" ? "listaResposta" : "listaEstoque";
+  const el   = document.getElementById(elId);
+
+  if (!lista.length) {
+    const msg = tab==="resposta"
+      ? "Nenhum cliente aguardando resposta"
+      : "Nenhum produto aguardando no estoque";
     el.innerHTML = `
     <div class="text-center py-16 text-gray-400">
-      <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-4 opacity-30"></i>
-      <div class="text-xl font-black text-gray-400 mb-1">Nenhum pedido encontrado</div>
-      <div class="text-sm">Clique em <strong>Novo Pedido</strong> para começar</div>
-    </div>`;
-    lucide.createIcons(); return;
-  }
-  el.innerHTML = list.map(cardPedido).join("");
-  lucide.createIcons();
-  list.forEach(p => {
-    const s = document.getElementById("sel-"+p.id);
-    if (s) s.addEventListener("change", e => updateStatus(p.id, e.target.value));
-  });
-}
-
-function updateStatus(id, ns) {
-  const p = pedidos.find(x=>x.id===id); if (!p) return;
-  p.status = ns; p.atualizadoEm = new Date().toISOString();
-  save(); renderAll();
-}
-
-function deletePedido(id) {
-  const p = pedidos.find(x=>x.id===id); if (!p) return;
-  if (!confirm(`Excluir o pedido de "${p.cliente}"?`)) return;
-  pedidos = pedidos.filter(x=>x.id!==id);
-  save(); renderAll();
-}
-
-/* ─────────────── RENDER ESTOQUE ─────────────── */
-function renderEstoque() {
-  const el = document.getElementById("stockList");
-  if (!estoque.length) {
-    el.innerHTML = `
-    <div class="text-center py-16 text-gray-400">
-      <i data-lucide="package" class="w-16 h-16 mx-auto mb-4 opacity-30"></i>
-      <div class="text-xl font-black text-gray-400 mb-1">Nenhum item aguardando</div>
+      <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-4 opacity-25"></i>
+      <div class="text-lg font-black text-gray-400 mb-1">${msg}</div>
       <div class="text-sm">Clique em <strong>Adicionar</strong> para registrar</div>
     </div>`;
-    lucide.createIcons();
   } else {
-    el.innerHTML = estoque.map(e => `
-    <div class="bg-white rounded-xl border border-slate-100 shadow-sm mb-3 overflow-hidden"
-         style="border-left:4px solid #3b82f6;">
-      <div class="p-4 flex items-start justify-between gap-4">
-        <div class="flex-1 min-w-0">
-          <div class="font-bold text-gray-900 mb-1">${escHtml(e.cliente)}</div>
-          <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-500">
-            ${e.telefone ? `<span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i>${escHtml(e.telefone)}</span>` : ""}
-            <span class="flex items-center gap-1 font-semibold text-gray-700">
-              <i data-lucide="package" class="w-3 h-3"></i>${escHtml(e.produto)}
-            </span>
-            ${e.vendedora ? `<span class="flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i>${escHtml(e.vendedora)}</span>` : ""}
-            <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i>${fmt(e.criadoEm)}</span>
-          </div>
-        </div>
-        <button onclick="removeEstoque(${e.id})"
-                class="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white
-                       text-xs font-semibold px-3 py-2 rounded-lg transition-colors shrink-0">
-          <i data-lucide="check" class="w-3 h-3"></i> Produto chegou
-        </button>
-      </div>
-    </div>`).join("");
-    lucide.createIcons();
+    el.innerHTML = lista.map(makeCard).join("");
+  }
+  lucide.createIcons();
+}
+
+/* ── ACTIONS ── */
+function removeItem(id, label) {
+  const it = itens.find(x=>x.id===id); if (!it) return;
+  if (!confirm(`"${label}" para ${it.cliente}?\nO registro será removido.`)) return;
+  itens = itens.filter(x=>x.id!==id);
+  save(); renderAll();
+}
+
+function moverParaEstoque(id) {
+  const it = itens.find(x=>x.id===id); if (!it) return;
+  if (!confirm(`Mover "${it.cliente}" para Aguardando Estoque?`)) return;
+  it.status = "aguardando_estoque";
+  it.atualizadoEm = new Date().toISOString();
+  save(); renderAll();
+}
+
+function deleteItem(id) {
+  const it = itens.find(x=>x.id===id); if (!it) return;
+  if (!confirm(`Excluir o registro de "${it.cliente}"?`)) return;
+  itens = itens.filter(x=>x.id!==id);
+  save(); renderAll();
+}
+
+/* ── MODAL ── */
+function openModal(defaultStatus=null, id=null) {
+  editId = id;
+  const titulo = id ? "Editar Registro" : "Adicionar";
+  document.getElementById("modalTitle").textContent = titulo;
+
+  if (id) {
+    const it = itens.find(x=>x.id===id); if (!it) return;
+    document.getElementById("fCliente").value   = it.cliente;
+    document.getElementById("fTelefone").value  = it.telefone||"";
+    document.getElementById("fProduto").value   = it.produto||"";
+    document.getElementById("fVendedora").value = it.vendedora||"";
+    document.getElementById("fStatus").value    = it.status;
+  } else {
+    document.getElementById("fCliente").value   = "";
+    document.getElementById("fTelefone").value  = "";
+    document.getElementById("fProduto").value   = "";
+    document.getElementById("fVendedora").value = "";
+    document.getElementById("fStatus").value    = defaultStatus||"aguardando_resposta";
   }
 
-  // stock tab badge
-  const b = document.getElementById("stockTabBadge");
-  if (estoque.length) { b.textContent=`(${estoque.length})`; b.classList.remove("hidden"); }
-  else                { b.classList.add("hidden"); }
+  // color modal header by status
+  const st  = document.getElementById("fStatus").value;
+  const cor = st==="aguardando_estoque" ? "#1d4ed8" : "#0d2d6b";
+  document.getElementById("modalHeader").style.background = cor;
+  document.getElementById("fStatus").addEventListener("change", e => {
+    document.getElementById("modalHeader").style.background =
+      e.target.value==="aguardando_estoque" ? "#1d4ed8" : "#0d2d6b";
+  }, {once:true});
+
+  validateModal();
+  document.getElementById("modal").classList.remove("hidden");
+  document.getElementById("modal").classList.add("flex");
 }
 
-function removeEstoque(id) {
-  estoque = estoque.filter(x=>x.id!==id);
-  save(); renderEstoque(); updateHeaderAlert();
-  if (!document.getElementById("tabGerencial").classList.contains("hidden")) renderGerencial();
+function closeModal() {
+  document.getElementById("modal").classList.add("hidden");
+  document.getElementById("modal").classList.remove("flex");
+  editId = null;
 }
 
-/* ─────────────── RENDER GERENCIAL ─────────────── */
+function validateModal() {
+  const ok = document.getElementById("fCliente").value.trim() &&
+             document.getElementById("fProduto").value.trim();
+  document.getElementById("btnSalvar").disabled = !ok;
+}
+
+function salvar() {
+  const cliente   = document.getElementById("fCliente").value.trim();
+  const telefone  = document.getElementById("fTelefone").value.trim();
+  const produto   = document.getElementById("fProduto").value.trim();
+  const vendedora = document.getElementById("fVendedora").value;
+  const status    = document.getElementById("fStatus").value;
+  if (!cliente || !produto) return;
+  const now = new Date().toISOString();
+  if (editId) {
+    const it = itens.find(x=>x.id===editId);
+    if (it) Object.assign(it, {cliente,telefone,produto,vendedora,status,atualizadoEm:now});
+  } else {
+    itens.push({id:Date.now(), cliente, telefone, produto, vendedora, status,
+                criadoEm:now, atualizadoEm:now});
+  }
+  save(); closeModal(); renderAll();
+}
+
+/* ── GERENCIAL ── */
 function renderGerencial() {
-  const ativos     = pedidos.filter(p=>p.status!=="finalizado");
-  const alertas    = pedidos.filter(isAlert);
-  const finalizados= pedidos.filter(p=>p.status==="finalizado");
+  const res  = itens.filter(x=>x.status==="aguardando_resposta");
+  const est  = itens.filter(x=>x.status==="aguardando_estoque");
+  const alts = itens.filter(isAlert);
 
-  // 4 KPIs
-  document.getElementById("gerencialKpis").innerHTML = `
-  <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-    <div class="text-4xl font-black text-blue-700">${ativos.length}</div>
-    <div class="text-sm text-gray-500 mt-1 font-semibold">Pedidos Ativos</div>
-  </div>
-  <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-    <div class="text-4xl font-black text-red-500">${alertas.length}</div>
-    <div class="text-sm text-gray-500 mt-1 font-semibold">Alertas +24h</div>
-  </div>
-  <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-    <div class="text-4xl font-black text-yellow-500">${estoque.length}</div>
-    <div class="text-sm text-gray-500 mt-1 font-semibold">Aguardando Estoque</div>
-  </div>
-  <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-    <div class="text-4xl font-black text-emerald-600">${finalizados.length}</div>
-    <div class="text-sm text-gray-500 mt-1 font-semibold">Finalizados</div>
-  </div>`;
+  document.getElementById("kpiResposta").textContent = res.length;
+  document.getElementById("kpiEstoque").textContent  = est.length;
+  document.getElementById("kpiAlertas").textContent  = alts.length;
 
   // Bar chart
-  const counts = VENDEDORAS.map(v => ativos.filter(p=>p.vendedora===v).length);
-  const max = Math.max(...counts, 1);
-  document.getElementById("vendedoraChart").innerHTML = VENDEDORAS.map((v,i) => {
-    const n = counts[i];
-    const al= ativos.filter(p=>p.vendedora===v && isAlert(p)).length;
-    const pct = Math.round(n/max*100);
+  const max = Math.max(...VENDEDORAS.map(v=>itens.filter(x=>x.vendedora===v).length), 1);
+  document.getElementById("gerChart").innerHTML = VENDEDORAS.map(v => {
+    const nRes = res.filter(x=>x.vendedora===v).length;
+    const nEst = est.filter(x=>x.vendedora===v).length;
+    const total = nRes+nEst;
+    const pct   = Math.round(total/max*100);
+    const al    = itens.filter(x=>x.vendedora===v && isAlert(x)).length;
     return `
     <div class="flex items-center gap-3 mb-3">
       <div class="w-28 text-sm font-semibold text-gray-700 shrink-0 truncate">${v}</div>
-      <div class="flex-1 bg-gray-100 rounded-full h-7 overflow-hidden">
-        <div style="width:${pct}%;background:#0d2d6b;" class="h-full rounded-full transition-all duration-500"></div>
+      <div class="flex-1 bg-gray-100 rounded-full h-7 overflow-hidden flex">
+        <div style="width:${Math.round(nRes/max*100)}%;background:#f59e0b;" class="h-full transition-all duration-500" title="Resposta: ${nRes}"></div>
+        <div style="width:${Math.round(nEst/max*100)}%;background:#3b82f6;" class="h-full transition-all duration-500" title="Estoque: ${nEst}"></div>
       </div>
-      <div class="text-sm font-black text-gray-800 w-5 text-right shrink-0">${n}</div>
+      <div class="text-sm font-black text-gray-800 w-5 text-right shrink-0">${total}</div>
       ${al>0?`<span class="bg-red-100 text-red-600 text-[11px] font-bold px-2 py-0.5 rounded-full border border-red-200 shrink-0">${al}⚠</span>`:""}
     </div>`;
   }).join("");
 
-  // Alerts list
-  document.getElementById("gerencialAlertList").innerHTML = !alertas.length
-    ? `<div class="text-center py-8 text-gray-400 font-semibold">Nenhum alerta ✓</div>`
-    : alertas.map(p => {
-      const h=Math.floor(hours(p.atualizadoEm));
+  // Alerts
+  document.getElementById("gerAlerts").innerHTML = !alts.length
+    ? `<div class="text-center py-8 text-gray-400 font-semibold">Nenhum alerta no momento ✓</div>`
+    : alts.map(it => {
+      const h  = Math.floor(hours(it.atualizadoEm));
+      const cfg = STATUS_CFG[it.status];
       return `
-      <div class="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl mb-2">
-        <div>
-          <span class="font-bold text-gray-900">${escHtml(p.cliente)}</span>
-          <span class="text-xs text-red-500 font-semibold ml-2">${h}h sem movimentação</span>
-          <div class="text-xs text-gray-500 mt-0.5">${escHtml(p.vendedora)} · ${STATUS[p.status]?.label||""}</div>
+      <div class="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl mb-2 gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-bold text-gray-900">${esc(it.cliente)}</span>
+            <span class="text-xs text-red-500 font-semibold">${h}h sem movimentação</span>
+          </div>
+          <div class="text-xs text-gray-500 mt-0.5 truncate">${cfg.emoji} ${cfg.label}${it.vendedora?" · "+esc(it.vendedora):""}</div>
+          ${it.produto?`<div class="text-xs text-gray-400 italic mt-0.5 truncate">${esc(it.produto)}</div>`:""}
         </div>
-        <button onclick="openModalPedido(${p.id})" style="background:#0d2d6b;"
-                class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:opacity-90">
+        <button onclick="openModal(null,${it.id})" style="background:#0d2d6b;"
+                class="text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:opacity-90 shrink-0">
           Editar
         </button>
       </div>`;
     }).join("");
 
-  // Premium list
-  const prems = pedidos.filter(p=>p.premium && p.status!=="finalizado");
-  document.getElementById("gerencialPremiumList").innerHTML = !prems.length
-    ? `<div class="text-center py-8 text-gray-400 font-semibold">Nenhum pedido premium ativo</div>`
-    : prems.map(p => {
-      const cfg=STATUS[p.status];
-      return `
-      <div class="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-100 rounded-xl mb-2">
-        <div>
-          <span class="font-bold text-gray-900">⭐ ${escHtml(p.cliente)}</span>
-          ${p.empresa?`<span class="text-xs text-gray-500 ml-2">${escHtml(p.empresa)}</span>`:""}
-          <div class="text-xs text-gray-500 mt-0.5">${escHtml(p.vendedora)}${p.telefone?" · "+escHtml(p.telefone):""}</div>
-        </div>
-        <div class="flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold"
-             style="background:rgba(${rgb(cfg.cor)},.1);border:1px solid rgba(${rgb(cfg.cor)},.4);color:${cfg.cor};">
-          <span class="w-2 h-2 rounded-full" style="background:${cfg.cor};"></span>
-          ${cfg.label}
-        </div>
-      </div>`;
-    }).join("");
-
   lucide.createIcons();
 }
 
-/* ─────────────── HEADER ALERT ─────────────── */
-function updateHeaderAlert() {
-  const n = pedidos.filter(isAlert).length;
-  const el = document.getElementById("headerAlertBadge");
-  document.getElementById("headerAlertCount").textContent = n;
-  if (n>0) { el.classList.remove("hidden"); el.classList.add("flex"); }
-  else     { el.classList.add("hidden");    el.classList.remove("flex"); }
+/* ── HEADER ALERT + TAB BADGES ── */
+function updateBadges() {
+  const alts = itens.filter(isAlert).length;
+  const el   = document.getElementById("headerAlertBadge");
+  document.getElementById("headerAlertCount").textContent = alts;
+  if (alts>0) { el.classList.remove("hidden"); el.classList.add("flex"); }
+  else        { el.classList.add("hidden");    el.classList.remove("flex"); }
+
+  const nRes = itens.filter(x=>x.status==="aguardando_resposta").length;
+  const nEst = itens.filter(x=>x.status==="aguardando_estoque").length;
+
+  const bR = document.getElementById("badgeResposta");
+  const bE = document.getElementById("badgeEstoque");
+
+  if (nRes>0) { bR.textContent=nRes; bR.classList.remove("hidden"); }
+  else        { bR.classList.add("hidden"); }
+  if (nEst>0) { bE.textContent=nEst; bE.classList.remove("hidden"); }
+  else        { bE.classList.add("hidden"); }
 }
 
-/* ─────────────── MODAL PEDIDO ─────────────── */
+/* ── POPULATE SELECTS ── */
 function populateSelects() {
-  const vOpts = VENDEDORAS.map(v=>`<option value="${v}">${v}</option>`).join("");
-  document.getElementById("fpVendedora").innerHTML = `<option value="">Selecione a vendedora...</option>${vOpts}`;
-  document.getElementById("feVendedora").innerHTML = `<option value="">Selecione...</option>${vOpts}`;
-  document.getElementById("fpStatus").innerHTML =
-    Object.entries(STATUS).map(([id,c])=>`<option value="${id}">${c.label}</option>`).join("");
+  const opts = VENDEDORAS.map(v=>`<option value="${v}">${v}</option>`).join("");
+  document.getElementById("fVendedora").innerHTML = `<option value="">Selecione...</option>${opts}`;
 }
 
-function openModalPedido(id=null) {
-  editId = id;
-  const btn = document.getElementById("btnSalvarPedido");
-  const ttl = document.getElementById("modalPedidoTitle");
-
-  if (id) {
-    const p = pedidos.find(x=>x.id===id); if (!p) return;
-    ttl.textContent = "Editar Pedido"; btn.textContent = "Salvar Alterações";
-    document.getElementById("fpTipo").value      = p.tipo;
-    document.getElementById("fpCliente").value   = p.cliente;
-    document.getElementById("fpEmpresa").value   = p.empresa||"";
-    document.getElementById("fpTelefone").value  = p.telefone||"";
-    document.getElementById("fpVendedora").value = p.vendedora;
-    document.getElementById("fpValor").value     = p.valor||"";
-    document.getElementById("fpStatus").value    = p.status;
-    document.getElementById("fpDescricao").value = p.descricao||"";
-    document.getElementById("fpPremium").checked = !!p.premium;
-  } else {
-    ttl.textContent = "Novo Pedido"; btn.textContent = "Criar Pedido";
-    document.getElementById("fpTipo").value      = "PF";
-    document.getElementById("fpCliente").value   = "";
-    document.getElementById("fpEmpresa").value   = "";
-    document.getElementById("fpTelefone").value  = "";
-    document.getElementById("fpVendedora").value = "";
-    document.getElementById("fpValor").value     = "";
-    document.getElementById("fpStatus").value    = "atendimento";
-    document.getElementById("fpDescricao").value = "";
-    document.getElementById("fpPremium").checked = false;
-  }
-  toggleEmpresaField(); validatePedidoForm();
-  show("modalPedido");
-}
-
-function closeModalPedido() { hide("modalPedido"); editId=null; }
-
-function toggleEmpresaField() {
-  const pj = document.getElementById("fpTipo").value==="PJ";
-  pj ? document.getElementById("empresaWrap").classList.remove("hidden")
-     : document.getElementById("empresaWrap").classList.add("hidden");
-  pj ? document.getElementById("premiumWrap").classList.remove("hidden")
-     : document.getElementById("premiumWrap").classList.add("hidden");
-  if (!pj) document.getElementById("fpPremium").checked=false;
-}
-
-function validatePedidoForm() {
-  const ok = document.getElementById("fpCliente").value.trim() &&
-             document.getElementById("fpVendedora").value;
-  document.getElementById("btnSalvarPedido").disabled = !ok;
-}
-
-function salvarPedido() {
-  const tipo      = document.getElementById("fpTipo").value;
-  const cliente   = document.getElementById("fpCliente").value.trim();
-  const empresa   = document.getElementById("fpEmpresa").value.trim();
-  const telefone  = document.getElementById("fpTelefone").value.trim();
-  const vendedora = document.getElementById("fpVendedora").value;
-  const valor     = document.getElementById("fpValor").value.trim();
-  const status    = document.getElementById("fpStatus").value;
-  const descricao = document.getElementById("fpDescricao").value.trim();
-  const premium   = document.getElementById("fpPremium").checked;
-  if (!cliente||!vendedora) return;
-  const now = new Date().toISOString();
-  if (editId) {
-    const p = pedidos.find(x=>x.id===editId);
-    if (p) Object.assign(p,{tipo,cliente,empresa,telefone,vendedora,valor,status,descricao,premium,atualizadoEm:now});
-  } else {
-    pedidos.push({id:Date.now(),tipo,cliente,empresa,telefone,vendedora,status,descricao,valor,premium,criadoEm:now,atualizadoEm:now});
-  }
-  save(); closeModalPedido(); renderAll();
-}
-
-/* ─────────────── MODAL ESTOQUE ─────────────── */
-function openModalEstoque() {
-  ["feCliente","feTelefone","feProduto"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("feVendedora").value="";
-  validateEstoqueForm(); show("modalEstoque");
-}
-function closeModalEstoque() { hide("modalEstoque"); }
-
-function validateEstoqueForm() {
-  const ok = document.getElementById("feCliente").value.trim() &&
-             document.getElementById("feProduto").value.trim();
-  document.getElementById("btnSalvarEstoque").disabled = !ok;
-}
-
-function salvarEstoque() {
-  const cliente  = document.getElementById("feCliente").value.trim();
-  const telefone = document.getElementById("feTelefone").value.trim();
-  const produto  = document.getElementById("feProduto").value.trim();
-  const vendedora= document.getElementById("feVendedora").value;
-  if (!cliente||!produto) return;
-  estoque.push({id:Date.now(),cliente,telefone,produto,vendedora,criadoEm:new Date().toISOString()});
-  save(); closeModalEstoque(); renderEstoque(); updateHeaderAlert();
+/* ── RENDER ALL ── */
+function renderAll() {
+  renderChips("resposta");
+  renderChips("estoque");
+  renderLista("resposta");
+  renderLista("estoque");
+  updateBadges();
   if (!document.getElementById("tabGerencial").classList.contains("hidden")) renderGerencial();
 }
 
-/* ─────────────── HELPERS ─────────────── */
-function show(id) {
-  document.getElementById(id).classList.remove("hidden");
-  document.getElementById(id).classList.add("flex");
-}
-function hide(id) {
-  document.getElementById(id).classList.add("hidden");
-  document.getElementById(id).classList.remove("flex");
-}
-function escHtml(s) {
-  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-
-/* ─────────────── RENDER ALL ─────────────── */
-function renderAll() {
-  renderKpiBar(); renderChips(); renderPedidos(); renderEstoque(); updateHeaderAlert(); lucide.createIcons();
-}
-
-/* ─────────────── CLOSE MODALS ON OVERLAY CLICK ─────────────── */
-["modalPedido","modalEstoque"].forEach(id => {
-  document.getElementById(id).addEventListener("click", e => {
-    if (e.target === document.getElementById(id)) {
-      id==="modalPedido" ? closeModalPedido() : closeModalEstoque();
-    }
-  });
+/* ── CLOSE MODAL ON OVERLAY ── */
+document.getElementById("modal").addEventListener("click", e => {
+  if (e.target===document.getElementById("modal")) closeModal();
 });
 
-/* ─────────────── INIT ─────────────── */
+/* ── INIT ── */
 document.addEventListener("DOMContentLoaded", () => {
   load(); populateSelects(); renderAll();
 });
