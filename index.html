@@ -576,6 +576,12 @@ function makeCard(it) {
                      text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
         <i data-lucide="check" class="w-3 h-3"></i> Produto chegou
       </button>
+      <button onclick="moverResposta('${it.id}')"
+              class="flex items-center gap-1 border text-yellow-600 hover:bg-yellow-50
+                     text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+              style="border-color:#f59e0b;">
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> Mover p/ Resposta
+      </button>
     </div>`;
 
   return `
@@ -639,6 +645,13 @@ function moverEstoque(id) {
   const sid=String(id); const it=itens.find(x=>String(x.id)===sid); if (!it) return;
   if (!confirm(`Mover "${it.cliente}" para Aguardando Estoque?`)) return;
   it.status="aguardando_estoque"; it.atualizadoEm=new Date().toISOString();
+  renderAll(); refreshDrill();
+  apiWrite("update", {item:it});
+}
+function moverResposta(id) {
+  const sid=String(id); const it=itens.find(x=>String(x.id)===sid); if (!it) return;
+  if (!confirm(`Mover "${it.cliente}" para Aguardando Resposta?`)) return;
+  it.status="aguardando_resposta"; it.atualizadoEm=new Date().toISOString();
   renderAll(); refreshDrill();
   apiWrite("update", {item:it});
 }
@@ -797,6 +810,11 @@ function drillCard(it) {
                   class="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white
                          text-[11px] font-semibold px-2.5 py-1 rounded-lg">
             <i data-lucide="check" class="w-3 h-3"></i> Produto chegou
+          </button>
+          <button onclick="moverResposta('${it.id}')"
+                  class="flex items-center gap-1 border text-yellow-600 hover:bg-yellow-50
+                         text-[11px] font-semibold px-2.5 py-1 rounded-lg" style="border-color:#f59e0b;">
+            <i data-lucide="arrow-left" class="w-3 h-3"></i> Mover p/ Resposta
           </button>`}
         </div>
       </div>
