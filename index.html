@@ -129,7 +129,7 @@
             <input id="fTelefone" type="text" placeholder="(43) 99999-9999"
                    class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm
                           focus:outline-none focus:ring-2 focus:ring-blue-200"
-                   oninput="validateAddForm()">
+                   oninput="this.value=this.value.replace(/[^0-9()\s\-+]/g,'');validateAddForm()">
           </div>
 
           <!-- Produto -->
